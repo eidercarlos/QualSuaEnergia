@@ -7,4 +7,10 @@ EditorBuildSettings:
   m_Scenes:
   - enabled: 1
     path: Assets/Scenes/Main.unity
+    guid: af3433285d20dac4cb358fe89ba1dfa7
+  - enabled: 1
+    path: Assets/Scenes/Idle.unity
+    guid: 5f67412686adb9a4b8c6fd6922c597f7
+  - enabled: 1
+    path: Assets/Scenes/Interaction.unity
     guid: 5c9044f57d885ae498d65a48c9de89c9
