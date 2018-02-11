@@ -7,29 +7,40 @@ public class SceneHandler : MonoBehaviour
 {   
     private string idleSceneName = "Idle";
     private string interactionSceneName = "Interaction";
-    private Scene idleScene;
-    private Scene interactionScene;
     private string currentScene;
-
     private float timeLeftToGoIdle;
+    private float timeIdleAfterStart = 4.0f;
+    private float timeOfInteractionStart;
+    private float timeToPrintInteraction = 10.0f; 
     private float idleTime = 5.0f;
     private float cursorPosition;
     private bool catchCursor = true;
-    private bool isLoadingScene;
+    private bool isOnInteraction = false;
+    private string printScrPath = "";
 
-    void Start ()
+    void Awake ()
     {              
         //Check if the Idle scene is already loaded
         if(!SceneManager.GetSceneByName(idleSceneName).isLoaded)
-        {   
+        {      
             currentScene = idleSceneName;
             SceneManager.LoadScene(idleSceneName, LoadSceneMode.Additive);                            
         }   
-    }   
+    }
 
     void Update()
     {
-        TimerHandler();
+        if(Time.time > timeIdleAfterStart)
+        {   
+            TimerHandler();
+
+            if( (isOnInteraction) && ((Time.time - timeOfInteractionStart) > timeToPrintInteraction) )
+            {   
+                Debug.Log("taking a picture...");
+                ScreenCapture.CaptureScreenshot("NicePicture.png", 4);
+                isOnInteraction = false;
+            }   
+        }
     }
 
     private void TimerHandler()
@@ -44,7 +55,6 @@ public class SceneHandler : MonoBehaviour
         if(cursorPosition == Input.GetAxis("Mouse X"))
         {   
             timeLeftToGoIdle -= Time.deltaTime;
-
             if(timeLeftToGoIdle < 0)
             {   
                 timeLeftToGoIdle = idleTime;
@@ -52,10 +62,9 @@ public class SceneHandler : MonoBehaviour
                 catchCursor = true;
 
                 if(!SceneManager.GetSceneByName(idleSceneName).isLoaded)
-                {   
-                    Scene interactionScene = SceneManager.GetSceneByName(interactionSceneName);
-                    var unloadInteractionScene = SceneManager.UnloadSceneAsync(interactionScene);
-                    SceneManager.LoadSceneAsync(idleSceneName, LoadSceneMode.Additive);
+                {
+                    LoadTheScene(idleSceneName, interactionSceneName);
+                    isOnInteraction = false;
                 }   
             }   
         }   
@@ -66,38 +75,19 @@ public class SceneHandler : MonoBehaviour
 
             if(!SceneManager.GetSceneByName(interactionSceneName).isLoaded)
             {   
-                Scene idleScene = SceneManager.GetSceneByName(idleSceneName);
-                var unloadIdleScene = SceneManager.UnloadSceneAsync(idleScene);
-                SceneManager.LoadSceneAsync(interactionSceneName, LoadSceneMode.Additive);
+                LoadTheScene(interactionSceneName, idleSceneName);
+                timeOfInteractionStart = Time.time;
+                isOnInteraction = true;
             }
         }   
     }
 
-    private IEnumerator LoadSceneCoroutine(string sceneToLoad, string sceneToUnload)
+    private void LoadTheScene(string sceneToLoadName, string sceneToUnloadName)
     {   
-        isLoadingScene = true;
-
-        var previousScene = SceneManager.GetSceneByName(sceneToUnload);
-        var previousSceneName = previousScene.name;
-
-        // load target scene
-        var loadOperation = SceneManager.LoadSceneAsync(sceneToLoad, LoadSceneMode.Additive);
-
-        yield return loadOperation;
-
-        //var targetScene = SceneManager.GetSceneByName(sceneToLoad);
-        //SceneManager.SetActiveScene(targetScene);
-
-        // unload previous scene
-        var unloadSceneOperation = SceneManager.UnloadSceneAsync(previousScene);
-
-        unloadSceneOperation.allowSceneActivation = false;
-
-        while (!unloadSceneOperation.isDone)
-            yield return null;
-
+        Scene sceneToUnload = SceneManager.GetSceneByName(sceneToUnloadName);
+        SceneManager.UnloadSceneAsync(sceneToUnload);
+        SceneManager.LoadScene(sceneToLoadName, LoadSceneMode.Additive);
     }
-
 
 }
 
