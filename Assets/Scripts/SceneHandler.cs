@@ -52,10 +52,11 @@ public class SceneHandler : MonoBehaviour
                 catchCursor = true;
 
                 if(!SceneManager.GetSceneByName(idleSceneName).isLoaded)
-                {
-                    Debug.Log("Load the Idle scene and unload the interaction");
-
-                }
+                {   
+                    Scene interactionScene = SceneManager.GetSceneByName(interactionSceneName);
+                    var unloadInteractionScene = SceneManager.UnloadSceneAsync(interactionScene);
+                    SceneManager.LoadSceneAsync(idleSceneName, LoadSceneMode.Additive);
+                }   
             }   
         }   
         else //In case of the user is interacting with something....
@@ -64,14 +65,16 @@ public class SceneHandler : MonoBehaviour
             Cursor.visible = true;
 
             if(!SceneManager.GetSceneByName(interactionSceneName).isLoaded)
-            {
-                Debug.Log("Load the Interaction scene and unload the idle");
+            {   
+                Scene idleScene = SceneManager.GetSceneByName(idleSceneName);
+                var unloadIdleScene = SceneManager.UnloadSceneAsync(idleScene);
+                SceneManager.LoadSceneAsync(interactionSceneName, LoadSceneMode.Additive);
             }
         }   
     }
 
-    public IEnumerator LoadSceneCoroutine(string sceneToLoad, string sceneToUnload)
-    {
+    private IEnumerator LoadSceneCoroutine(string sceneToLoad, string sceneToUnload)
+    {   
         isLoadingScene = true;
 
         var previousScene = SceneManager.GetSceneByName(sceneToUnload);
