@@ -9,14 +9,16 @@ public class SceneHandler : MonoBehaviour
     private string interactionSceneName = "Interaction";
     private string currentScene;
     private float timeLeftToGoIdle;
-    private float timeIdleAfterStart = 4.0f;
+    private float timeIdleAfterStart = 3.0f;
     private float timeOfInteractionStart;
-    private float timeToPrintInteraction = 10.0f; 
+    private float timeToPrintInteraction = 7.0f; 
     private float idleTime = 5.0f;
     private float cursorPosition;
     private bool catchCursor = true;
     private bool isOnInteraction = false;
-    private string printScrPath = "";
+    private string printScrPath = "C:\\";
+    private string printScrFileName;
+    private int printScrQuality = 3;
 
     void Awake ()
     {              
@@ -29,19 +31,23 @@ public class SceneHandler : MonoBehaviour
     }
 
     void Update()
-    {
+    {   
         if(Time.time > timeIdleAfterStart)
         {   
             TimerHandler();
-
+            
             if( (isOnInteraction) && ((Time.time - timeOfInteractionStart) > timeToPrintInteraction) )
             {   
-                Debug.Log("taking a picture...");
-                ScreenCapture.CaptureScreenshot("NicePicture.png", 4);
+                Debug.Log("Taking a picture...");
+                //Debug.Log(Application.persistentDataPath);
+                Debug.Log(Application.dataPath);
+                printScrFileName = "Screenshot_"+System.DateTime.Now.ToString("yyyyMMddHHmmss")+".png";
+                ScreenCapture.CaptureScreenshot(printScrFileName, printScrQuality);
+                //System.IO.File.Move(Origin_Path, Path);
                 isOnInteraction = false;
             }   
-        }
-    }
+        }   
+    }   
 
     private void TimerHandler()
     {   
