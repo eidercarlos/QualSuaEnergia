@@ -1,10 +1,14 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class SceneHandler : MonoBehaviour
 {   
+    public GameObject CanvasQryEmail;
+    public InputField InputBarcode;
     private string idleSceneName = "Idle";
     private string interactionSceneName = "Interaction";
     private string currentScene;
@@ -16,19 +20,26 @@ public class SceneHandler : MonoBehaviour
     private float cursorPosition;
     private bool catchCursor = true;
     private bool isOnInteraction = false;
-    private string printScrPath = "C:\\";
+    private string printScrPath;
     private string printScrFileName;
     private int printScrQuality = 3;
+    private float timeOfInputBarcodeValueChanged;
 
     void Awake ()
-    {              
+    {   
         //Check if the Idle scene is already loaded
         if(!SceneManager.GetSceneByName(idleSceneName).isLoaded)
-        {      
+        {   
             currentScene = idleSceneName;
             SceneManager.LoadScene(idleSceneName, LoadSceneMode.Additive);                            
         }   
-    }
+    }   
+
+    //string path = @"C:\Folder1\Folder2\Folder3\Folder4";
+    //string newPath = Path.GetFullPath(Path.Combine(path, @"..\..\"));
+    //Note This goes two levels up.The result would be:  newPath = @"C:\Folder1\Folder2\";
+
+    //A option: string directory = System.IO.Directory.GetParent(System.IO.Directory.GetParent(Environment.CurrentDirectory).ToString()).ToString();
 
     void Update()
     {   
@@ -37,15 +48,9 @@ public class SceneHandler : MonoBehaviour
             TimerHandler();
             
             if( (isOnInteraction) && ((Time.time - timeOfInteractionStart) > timeToPrintInteraction) )
-            {   
-                Debug.Log("Taking a picture...");
-                //Debug.Log(Application.persistentDataPath);
-                Debug.Log(Application.dataPath);
-                printScrFileName = "Screenshot_"+System.DateTime.Now.ToString("yyyyMMddHHmmss")+".png";
-                ScreenCapture.CaptureScreenshot(printScrFileName, printScrQuality);
-                //System.IO.File.Move(Origin_Path, Path);
-                isOnInteraction = false;
-            }   
+            {
+                StartCoroutine(ProcessPrint());
+            }      
         }   
     }   
 
@@ -94,6 +99,67 @@ public class SceneHandler : MonoBehaviour
         SceneManager.UnloadSceneAsync(sceneToUnload);
         SceneManager.LoadScene(sceneToLoadName, LoadSceneMode.Additive);
     }
+
+    private IEnumerator ProcessPrint()
+    {   
+        Debug.Log("Taking a picture...");
+        isOnInteraction = false;
+
+        //Adds a listener to the input field and invokes a method when the value changes.
+        if(InputBarcode != null)
+        {
+            InputBarcode.onValueChanged.AddListener(delegate { InputBarcodeEndEdit(); });
+        }
+        else
+        {
+            Debug.Log("Objeto Input não encontrado ou associado...");
+        }
+
+        yield return TakeScreenShot();
+
+        if (CanvasQryEmail != null)
+        {
+            CanvasQryEmail.SetActive(true);
+            InputBarcode.Select();
+        }
+
+    }
+
+    private IEnumerator TakeScreenShot()
+    {
+        //Debug.Log(Application.persistentDataPath);
+        //Debug.Log(Application.dataPath); //D:/Projetos/QualSuaEnergia/QualSuaEnergia/Assets
+        //Debug.Log(System.IO.Directory.GetDirectoryRoot(Application.dataPath));
+        //System.IO.File.Move(printScrFileName, printScrPath+printScrFileName);
+        string defaultPath = Application.dataPath; //D:\Projetos\QualSuaEnergia\QualSuaEnergia\Assets
+        printScrPath = Path.GetFullPath(Path.Combine(defaultPath, @"..\..\"));
+        printScrFileName = "Screenshot_" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
+        ScreenCapture.CaptureScreenshot(printScrFileName, printScrQuality);
+        
+        while (!System.IO.File.Exists(printScrFileName))
+            yield return null;
+
+        Debug.Log("Print Sucesso!");
+
+    }
+
+    //Invoked when the value of the text field changes.
+    //Wait some time after the last change (char) and call a function to submit the value...
+    private void InputBarcodeEndEdit()
+    {   
+        if(InputBarcode.text.Length > 0)
+        {
+            //Remove all listener so it can't be called another time...
+            InputBarcode.onValueChanged.RemoveAllListeners();
+            StartCoroutine(ProcessInputBarcode());
+        }   
+    } 
+    
+    private IEnumerator ProcessInputBarcode()
+    {   
+        yield return new WaitForSeconds(2f);
+        Debug.Log("We have a total of: "+InputBarcode.text.Length+" characteres");
+    }   
 
 }
 
