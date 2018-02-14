@@ -8,9 +8,20 @@ public class SphereInteraction : MonoBehaviour
     public float verticalSpeed = 2.0f;
 
     void Update()
-    {
-        float h = horizontalSpeed * Input.GetAxis("Mouse X");
-        float v = verticalSpeed * Input.GetAxis("Mouse Y");
-        transform.Rotate(v, -h, 0, Space.World);
-    }
-}
+    {      
+        //Later lets check why the instance gets null after some time....
+        if(SceneHandler.Instance != null && SceneHandler.Instance.IsOnInteraction)
+        {   
+            float hRotation = horizontalSpeed * Input.GetAxis("Mouse X");
+            float vRotation = verticalSpeed * Input.GetAxis("Mouse Y");
+
+            if (SceneHandler.Instance.ConfigItems.invertAxisX)
+                hRotation = hRotation * (-1);
+
+            if (SceneHandler.Instance.ConfigItems.invertAxisY)
+                vRotation = vRotation * (-1);
+
+            transform.Rotate(vRotation, -hRotation, 0, Space.World);
+        }   
+    }   
+}   

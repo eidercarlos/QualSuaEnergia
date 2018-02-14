@@ -4,6 +4,10 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Newtonsoft;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
+using System;
 
 public class SceneHandler : MonoBehaviour
 {   
@@ -13,27 +17,48 @@ public class SceneHandler : MonoBehaviour
     private string interactionSceneName = "Interaction";
     private string currentScene;
     private float timeLeftToGoIdle;
-    private float timeIdleAfterStart = 3.0f;
+    private float timeIdleAfterStart;
     private float timeOfInteractionStart;
-    private float timeToPrintInteraction = 7.0f; 
-    private float idleTime = 5.0f;
+    private float timeToPrintInteraction; 
+    private float timeToGetIdle;
     private float cursorPosition;
     private bool catchCursor = true;
     private bool isOnInteraction = false;
     private string printScrPath;
     private string printScrFileName;
-    private int printScrQuality = 3;
+    private string APIRestURL;
+    private int printScrQuality;
     private float timeOfInputBarcodeValueChanged;
 
-    void Awake ()
+    public static SceneHandler Instance { get; set; }
+    public Settings ConfigItems { get; set; }
+
+    public bool IsOnInteraction
     {   
+        get
+        {   
+            return isOnInteraction;
+        }   
+    }   
+
+    void Awake ()
+    {      
+        Instance = this;
+
+        //Load the configurations from settings.json
+        using(StreamReader jsonFile = new StreamReader("settings.json"))
+        {   
+            string jsonFileContent = jsonFile.ReadToEnd();
+            ConfigItems = JsonConvert.DeserializeObject<Settings>(jsonFileContent);            
+        }   
+
         //Check if the Idle scene is already loaded
         if(!SceneManager.GetSceneByName(idleSceneName).isLoaded)
         {   
             currentScene = idleSceneName;
             SceneManager.LoadScene(idleSceneName, LoadSceneMode.Additive);                            
         }   
-    }   
+    }      
 
     //string path = @"C:\Folder1\Folder2\Folder3\Folder4";
     //string newPath = Path.GetFullPath(Path.Combine(path, @"..\..\"));
@@ -43,11 +68,11 @@ public class SceneHandler : MonoBehaviour
 
     void Update()
     {   
-        if(Time.time > timeIdleAfterStart)
+        if(Time.time > ConfigItems.timeIdleAfterStartApp)
         {   
             TimerHandler();
             
-            if( (isOnInteraction) && ((Time.time - timeOfInteractionStart) > timeToPrintInteraction) )
+            if( (isOnInteraction) && ((Time.time - timeOfInteractionStart) > ConfigItems.timeToPrintAfterStartInteraction) )
             {
                 StartCoroutine(ProcessPrint());
             }      
@@ -68,12 +93,12 @@ public class SceneHandler : MonoBehaviour
             timeLeftToGoIdle -= Time.deltaTime;
             if(timeLeftToGoIdle < 0)
             {   
-                timeLeftToGoIdle = idleTime;
+                timeLeftToGoIdle = ConfigItems.timeToGetIdle;
                 Cursor.visible = false;
                 catchCursor = true;
 
                 if(!SceneManager.GetSceneByName(idleSceneName).isLoaded)
-                {
+                {   
                     LoadTheScene(idleSceneName, interactionSceneName);
                     isOnInteraction = false;
                 }   
@@ -81,7 +106,7 @@ public class SceneHandler : MonoBehaviour
         }   
         else //In case of the user is interacting with something....
         {   
-            timeLeftToGoIdle = idleTime;
+            timeLeftToGoIdle = ConfigItems.timeToGetIdle;
             Cursor.visible = true;
 
             if(!SceneManager.GetSceneByName(interactionSceneName).isLoaded)
@@ -98,7 +123,7 @@ public class SceneHandler : MonoBehaviour
         Scene sceneToUnload = SceneManager.GetSceneByName(sceneToUnloadName);
         SceneManager.UnloadSceneAsync(sceneToUnload);
         SceneManager.LoadScene(sceneToLoadName, LoadSceneMode.Additive);
-    }
+    }   
 
     private IEnumerator ProcessPrint()
     {   
@@ -131,16 +156,17 @@ public class SceneHandler : MonoBehaviour
         //Debug.Log(Application.dataPath); //D:/Projetos/QualSuaEnergia/QualSuaEnergia/Assets
         //Debug.Log(System.IO.Directory.GetDirectoryRoot(Application.dataPath));
         //System.IO.File.Move(printScrFileName, printScrPath+printScrFileName);
-        string defaultPath = Application.dataPath; //D:\Projetos\QualSuaEnergia\QualSuaEnergia\Assets
-        printScrPath = Path.GetFullPath(Path.Combine(defaultPath, @"..\..\"));
-        printScrFileName = "Screenshot_" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
-        ScreenCapture.CaptureScreenshot(printScrFileName, printScrQuality);
+        //string defaultPath = Application.dataPath; //D:\Projetos\QualSuaEnergia\QualSuaEnergia\Assets
+        //printScrPath = Path.GetFullPath(Path.Combine(defaultPath, @"..\..\"));
+        string printScrFile = "Screenshot_" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
+
+        //string printScrFile = Path.Combine(ConfigItems.printScrPath, ConfigItems.printScrFileName);
+        ScreenCapture.CaptureScreenshot(printScrFile, ConfigItems.printScrQualityLevel);
         
-        while (!System.IO.File.Exists(printScrFileName))
+        while (!System.IO.File.Exists(printScrFile))
             yield return null;
 
         Debug.Log("Print Sucesso!");
-
     }
 
     //Invoked when the value of the text field changes.
@@ -158,34 +184,17 @@ public class SceneHandler : MonoBehaviour
     private IEnumerator ProcessInputBarcode()
     {   
         yield return new WaitForSeconds(2f);
-        Debug.Log("We have a total of: "+InputBarcode.text.Length+" characteres");
-    }   
+        //Debug.Log("We have a total of: "+InputBarcode.text.Length+" characteres");
+        //Store the inputbarcode text content into a string...
+        InputBarcode.text = "";
+        CanvasQryEmail.SetActive(false);
+    } 
+    
+    private string FormatPath(string path)
+    {
+        string newPath = path.Replace("/","\\");
+
+        return newPath;
+    }
 
 }
-
-/*Original Script
-float timeLeft;
-     float visibleCursorTimer = 10.0f;
-     float cursorPosition;
-     bool catchCursor = true;
-     void Update(){
-         if(catchCursor){
-             catchCursor = false;
-             cursorPosition = Input.GetAxis("Mouse X");
-         }
-         if(Input.GetAxis("Mouse X") == cursorPosition)
-              {
-                  print("Mouse stop");
-                  timeLeft -= Time.deltaTime;
-                  if ( timeLeft < 0 )
-                      {                
-                      timeLeft = visibleCursorTimer;
-                       Cursor.visible = false;
-                       catchCursor=true;
-                      }
-              }else{
-                  timeLeft = visibleCursorTimer;
-                  Cursor.visible = true;
-              }            
-     } 
-*/
