@@ -7,7 +7,14 @@ using UnityEngine.UI;
 using Newtonsoft;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
+using UnityEngine.Networking;
+
+//Mail configs
 using System;
+using System.Net;
+using System.Net.Mail;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 
 public class SceneHandler : MonoBehaviour
 {   
@@ -15,7 +22,6 @@ public class SceneHandler : MonoBehaviour
     public InputField InputBarcode;
     private string idleSceneName = "Idle";
     private string interactionSceneName = "Interaction";
-    private string currentScene;
     private float timeLeftToGoIdle;
     private float timeIdleAfterStart;
     private float timeOfInteractionStart;
@@ -55,7 +61,6 @@ public class SceneHandler : MonoBehaviour
         //Check if the Idle scene is already loaded
         if(!SceneManager.GetSceneByName(idleSceneName).isLoaded)
         {   
-            currentScene = idleSceneName;
             SceneManager.LoadScene(idleSceneName, LoadSceneMode.Additive);                            
         }   
     }      
@@ -158,12 +163,12 @@ public class SceneHandler : MonoBehaviour
         //System.IO.File.Move(printScrFileName, printScrPath+printScrFileName);
         //string defaultPath = Application.dataPath; //D:\Projetos\QualSuaEnergia\QualSuaEnergia\Assets
         //printScrPath = Path.GetFullPath(Path.Combine(defaultPath, @"..\..\"));
-        string printScrFile = "Screenshot_" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
+        printScrFileName = "Screenshot_" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
 
         //string printScrFile = Path.Combine(ConfigItems.printScrPath, ConfigItems.printScrFileName);
-        ScreenCapture.CaptureScreenshot(printScrFile, ConfigItems.printScrQualityLevel);
+        ScreenCapture.CaptureScreenshot(printScrFileName, ConfigItems.printScrQualityLevel);
         
-        while (!System.IO.File.Exists(printScrFile))
+        while (!System.IO.File.Exists(printScrFileName))
             yield return null;
 
         Debug.Log("Print Sucesso!");
@@ -184,17 +189,54 @@ public class SceneHandler : MonoBehaviour
     private IEnumerator ProcessInputBarcode()
     {   
         yield return new WaitForSeconds(2f);
+        
+        yield return GetRequest(ConfigItems.APIRestURL+"?id="+InputBarcode.text);
         //Debug.Log("We have a total of: "+InputBarcode.text.Length+" characteres");
         //Store the inputbarcode text content into a string...
         InputBarcode.text = "";
         CanvasQryEmail.SetActive(false);
-    } 
+    }   
     
+    private IEnumerator GetRequest(string uri)
+    {   
+        UnityWebRequest request = UnityWebRequest.Get(uri);
+        yield return request.SendWebRequest();
+
+        Users user = JsonConvert.DeserializeObject<Users>(request.downloadHandler.text);
+        Debug.Log(request.downloadHandler.text);
+        //SendEmail(user.email);
+
+        // Show results as text        
+        Debug.Log(request.downloadHandler.text);
+    }
+
     private string FormatPath(string path)
     {
-        string newPath = path.Replace("/","\\");
+        string newPath = path.Replace("/", "\\");
 
         return newPath;
     }
 
+    private void SendEmail(string email)
+    {
+        MailMessage mail = new MailMessage();
+        
+        mail.From = new MailAddress("eidercarlos@gmail.com");
+        mail.To.Add(email);
+        mail.Subject = "Test Mail";
+        mail.Body = "This is for testing SMTP mail from GMAIL";
+
+        Attachment printScrAttach = new Attachment(printScrFileName);
+        mail.Attachments.Add(printScrAttach);
+        
+        SmtpClient smtpServer = new SmtpClient("smtp.sendgrid.net");
+        smtpServer.Port = 465;
+        smtpServer.Credentials = new System.Net.NetworkCredential("apikey", "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") as ICredentialsByHost;
+        smtpServer.EnableSsl = true;
+        ServicePointManager.ServerCertificateValidationCallback = delegate(object s, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors){ return true; };
+
+        smtpServer.Send(mail);
+
+        Debug.Log("Mail sent with success!");
+    }
 }
