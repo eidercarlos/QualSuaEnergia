@@ -14,7 +14,6 @@ Devemos ter um arquivo de configuração chamado settings.json que abriga as seg
 
 public class Settings
 {   
-    public float timeIdleAfterStartApp;
     public float timeToPrintAfterStartInteraction;
     public float timeToGetIdle;
     public string printScrPath;

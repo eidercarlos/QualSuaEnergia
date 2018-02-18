@@ -23,14 +23,10 @@ public class SceneHandler : MonoBehaviour
     private string idleSceneName = "Idle";
     private string interactionSceneName = "Interaction";
     private float timeLeftToGoIdle;
-    private float timeIdleAfterStart;
     private float timeOfInteractionStart;
-    private float timeToPrintInteraction; 
-    private float timeToGetIdle;
     private float cursorPosition;
     private bool catchCursor = true;
     private bool isOnInteraction = false;
-    private string printScrPath;
     private string printScrFileName;
     private string APIRestURL;
     private int printScrQuality;
@@ -48,9 +44,9 @@ public class SceneHandler : MonoBehaviour
     }   
 
     void Awake ()
-    {      
+    {   
         Instance = this;
-
+        
         //Load the configurations from settings.json
         using(StreamReader jsonFile = new StreamReader("settings.json"))
         {   
@@ -72,17 +68,14 @@ public class SceneHandler : MonoBehaviour
     //A option: string directory = System.IO.Directory.GetParent(System.IO.Directory.GetParent(Environment.CurrentDirectory).ToString()).ToString();
 
     void Update()
-    {   
-        if(Time.time > ConfigItems.timeIdleAfterStartApp)
+    {      
+        TimerHandler();
+                    
+        if( (isOnInteraction) && ((Time.time - timeOfInteractionStart) > ConfigItems.timeToPrintAfterStartInteraction) )
         {   
-            TimerHandler();
-            
-            if( (isOnInteraction) && ((Time.time - timeOfInteractionStart) > ConfigItems.timeToPrintAfterStartInteraction) )
-            {
-                StartCoroutine(ProcessPrint());
-            }      
-        }   
-    }   
+            //StartCoroutine(ProcessPrint());
+        }      
+    }      
 
     private void TimerHandler()
     {   
@@ -204,7 +197,6 @@ public class SceneHandler : MonoBehaviour
 
         Users user = JsonConvert.DeserializeObject<Users>(request.downloadHandler.text);
         Debug.Log(request.downloadHandler.text);
-        //SendEmail(user.email);
 
         // Show results as text        
         Debug.Log(request.downloadHandler.text);
@@ -215,28 +207,5 @@ public class SceneHandler : MonoBehaviour
         string newPath = path.Replace("/", "\\");
 
         return newPath;
-    }
-
-    private void SendEmail(string email)
-    {
-        MailMessage mail = new MailMessage();
-        
-        mail.From = new MailAddress("eidercarlos@gmail.com");
-        mail.To.Add(email);
-        mail.Subject = "Test Mail";
-        mail.Body = "This is for testing SMTP mail from GMAIL";
-
-        Attachment printScrAttach = new Attachment(printScrFileName);
-        mail.Attachments.Add(printScrAttach);
-        
-        SmtpClient smtpServer = new SmtpClient("smtp.sendgrid.net");
-        smtpServer.Port = 465;
-        smtpServer.Credentials = new System.Net.NetworkCredential("apikey", "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") as ICredentialsByHost;
-        smtpServer.EnableSsl = true;
-        ServicePointManager.ServerCertificateValidationCallback = delegate(object s, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors){ return true; };
-
-        smtpServer.Send(mail);
-
-        Debug.Log("Mail sent with success!");
     }
 }

@@ -3,15 +3,15 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class SphereInteraction : MonoBehaviour
-{
-    public float horizontalSpeed = 2.0f;
-    public float verticalSpeed = 2.0f;
+{   
+    private float horizontalSpeed = 2.0f;
+    private float verticalSpeed = 2.0f;
 
     void Update()
     {      
-        //Later lets check why the instance gets null after some time....
         if(SceneHandler.Instance != null && SceneHandler.Instance.IsOnInteraction)
-        {   
+        {
+
             float hRotation = horizontalSpeed * Input.GetAxis("Mouse X");
             float vRotation = verticalSpeed * Input.GetAxis("Mouse Y");
 
@@ -22,6 +22,12 @@ public class SphereInteraction : MonoBehaviour
                 vRotation = vRotation * (-1);
 
             transform.Rotate(vRotation, -hRotation, 0, Space.World);
+
+            if(transform.hasChanged)
+            {
+                Debug.Log("Local Rotation: " + transform.localEulerAngles);
+            }
         }   
-    }   
+    }
+
 }   

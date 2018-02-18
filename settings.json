@@ -1,5 +1,4 @@
 {
-	"timeIdleAfterStartApp": 2,
 	"timeToPrintAfterStartInteraction": 8,
 	"timeToGetIdle" : 12,
 	"printScrPath" : "C:/",
