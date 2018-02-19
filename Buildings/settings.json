@@ -1,0 +1,10 @@
+{
+	"timeToPrintAfterStartInteraction": 8,
+	"timeToGetIdle" : 12,
+	"printScrPath" : "C:/",
+	"printScrFileName": "A_Nice_Picture",
+	"printScrQualityLevel": 3,
+	"APIRestURL" : "http://localhost/rest_api/users/read_one.php",
+	"invertAxisX": true,
+	"invertAxisY": true
+}
