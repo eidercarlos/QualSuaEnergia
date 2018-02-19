@@ -7,8 +7,7 @@ public class ME_DemoGUI : MonoBehaviour
     public GameObject Model;
     public int Current = 0;
     public GameObject[] Prefabs;
-   
-   
+
     public Light Sun;
     public ReflectionProbe ReflectionProbe;
     public Light[] NightLights = new Light[0];
@@ -117,9 +116,9 @@ public class ME_DemoGUI : MonoBehaviour
         float oldColorHUE = colorHUE;
         colorHUE = GUI.HorizontalSlider(new Rect(12*dpiScale, 147*dpiScale + offset, 285*dpiScale, 15*dpiScale), colorHUE, 0, 360);
 
-
         if (Mathf.Abs(oldColorHUE - colorHUE) > 0.001)
         {
+            Debug.Log("Color Hue: " + colorHUE);
 
             //var animator = characterInstance.GetComponent<ME_AnimatorEvents>();
             //if (animator != null)
@@ -150,12 +149,11 @@ public class ME_DemoGUI : MonoBehaviour
 
         }
     }
-
-
+    
     private GameObject instanceShieldProjectile;
 
-    void ChangeCurrent(int delta)
-    {
+    private void ChangeCurrent(int delta)
+    {   
         currentNomber += delta;
         if (currentNomber > Prefabs.Length - 1)
             currentNomber = 0;
@@ -169,7 +167,7 @@ public class ME_DemoGUI : MonoBehaviour
         }
 
         if (modelInstance != null)
-        {
+        {   
             Destroy(modelInstance);
             RemoveClones();
         }
@@ -177,23 +175,21 @@ public class ME_DemoGUI : MonoBehaviour
         //currentInstance = Instantiate(Prefabs[currentNomber]);
 
         //Instantiation of the Character
-        /*
         characterInstance = Instantiate(Character);
         characterInstance.GetComponent<ME_AnimatorEvents>().EffectPrefab = Prefabs[currentNomber];
-        */
 
         //Current Instantiation and Config of the Sphere
-        /*
+        
         modelInstance = Instantiate(Model);
 
-        var effectinstance = instantiate(prefabs[currentnomber]);
-        effectinstance.transform.parent = modelinstance.transform;
-        effectinstance.transform.localposition = vector3.zero;
-        effectinstance.transform.localrotation = new quaternion();
+        var effectinstance = Instantiate(Prefabs[currentNomber]);
+        effectinstance.transform.parent = modelInstance.transform;
+        effectinstance.transform.localPosition = Vector3.zero;
+        effectinstance.transform.localRotation = new Quaternion();
 
-        var meshUpdater = effectInstance.GetComponent<PSMeshRendererUpdater>();
+        var meshUpdater = effectinstance.GetComponent<PSMeshRendererUpdater>();
         meshUpdater.UpdateMeshEffect(modelInstance);
-        */
+        
 
         //for (int i = 1; i < 3; i++)
         //    for (int j = 1; j < 6; j++)
@@ -210,7 +206,7 @@ public class ME_DemoGUI : MonoBehaviour
         //        meshUpdater = effectInstance.GetComponent<PSMeshRendererUpdater>();
         //        meshUpdater.UpdateMeshEffect(characterInstanceChild);
         //    }
-        if (UseMobileVersion)
+        if(UseMobileVersion)
         {
             CancelInvoke("ReactivateEffect");
 

@@ -9,28 +9,21 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using UnityEngine.Networking;
 
-//Mail configs
-using System;
-using System.Net;
-using System.Net.Mail;
-using System.Net.Security;
-using System.Security.Cryptography.X509Certificates;
 
 public class SceneHandler : MonoBehaviour
 {   
     public GameObject CanvasQryEmail;
     public InputField InputBarcode;
     private string idleSceneName = "Idle";
-    private string interactionSceneName = "Interaction";
+    private string interactionSceneName = "MainInteraction";
     private float timeLeftToGoIdle;
     private float timeOfInteractionStart;
     private float cursorPosition;
     private bool catchCursor = true;
     private bool isOnInteraction = false;
     private string printScrFileName;
-    private string APIRestURL;
-    private int printScrQuality;
-    private float timeOfInputBarcodeValueChanged;
+    public GameObject IdleStars;
+    public GameObject IdleSun;
 
     public static SceneHandler Instance { get; set; }
     public Settings ConfigItems { get; set; }
@@ -44,7 +37,7 @@ public class SceneHandler : MonoBehaviour
     }   
 
     void Awake ()
-    {   
+    {
         Instance = this;
         
         //Load the configurations from settings.json
@@ -74,7 +67,7 @@ public class SceneHandler : MonoBehaviour
         if( (isOnInteraction) && ((Time.time - timeOfInteractionStart) > ConfigItems.timeToPrintAfterStartInteraction) )
         {   
             //StartCoroutine(ProcessPrint());
-        }      
+        }   
     }      
 
     private void TimerHandler()
@@ -96,7 +89,8 @@ public class SceneHandler : MonoBehaviour
                 catchCursor = true;
 
                 if(!SceneManager.GetSceneByName(idleSceneName).isLoaded)
-                {   
+                {
+                    ActivateIdleObjects();
                     LoadTheScene(idleSceneName, interactionSceneName);
                     isOnInteraction = false;
                 }   
@@ -110,6 +104,7 @@ public class SceneHandler : MonoBehaviour
             if(!SceneManager.GetSceneByName(interactionSceneName).isLoaded)
             {   
                 LoadTheScene(interactionSceneName, idleSceneName);
+                DeactivateIdleObjects();
                 timeOfInteractionStart = Time.time;
                 isOnInteraction = true;
             }
@@ -208,4 +203,16 @@ public class SceneHandler : MonoBehaviour
 
         return newPath;
     }
+
+    public void DeactivateIdleObjects()
+    {   
+        IdleStars.SetActive(false);
+        IdleSun.SetActive(false);
+    }   
+
+    public void ActivateIdleObjects()
+    {   
+        IdleStars.SetActive(true);
+        IdleSun.SetActive(true);
+    }   
 }
