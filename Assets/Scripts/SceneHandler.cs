@@ -140,7 +140,6 @@ public class SceneHandler : MonoBehaviour
             CanvasQryEmail.SetActive(true);
             InputBarcode.Select();
         }
-
     }
 
     private IEnumerator TakeScreenShot()
