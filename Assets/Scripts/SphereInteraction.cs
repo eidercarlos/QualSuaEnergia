@@ -34,7 +34,7 @@ public class SphereInteraction : MonoBehaviour
         lastAngle = transform.eulerAngles;
         lastAngleIndex = 0;
         currentEffectIndex = 0;
-        GenerateNewEffect();
+        //GenerateNewEffect();
         GoNight();
     }   
 
