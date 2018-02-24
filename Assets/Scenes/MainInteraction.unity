@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 8900000, guid: 545abe2b789631d42ba478c66371d77c, type: 2}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.45003307, g: 0.50008565, b: 0.57550234, a: 1}
+  m_IndirectSpecularColor: {r: 0, g: 0, b: 0, a: 1}
 --- !u!157 &4
 LightmapSettings:
   m_ObjectHideFlags: 0
@@ -28934,21 +28934,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e94c33821bc810743b2859c59d0c525d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Effects:
-  - {fileID: 100648, guid: 1632b5b7247a7ff449b4e9c1a4042c38, type: 2}
-  - {fileID: 196572, guid: c26aeb08a0720374daf1ed1d40dc8ae9, type: 2}
-  - {fileID: 176026, guid: 5e35c2d0a55b08f4fb11157be7dece54, type: 2}
-  - {fileID: 152782, guid: d64c6faee30140b4a8b3db59840632d6, type: 2}
-  - {fileID: 198776, guid: e35707b82f00a18479c2195e2211cdde, type: 2}
-  - {fileID: 1026360332464090, guid: 1b4b7cd2d2dea1345910934ed623e701, type: 2}
-  - {fileID: 101616, guid: 0d17861b52d38fb42aed018c4bc8e535, type: 2}
-  - {fileID: 140910, guid: 9f63943fa352a8841939a75858d240b2, type: 2}
-  - {fileID: 1034206889835440, guid: 69d367f73d879904c8b009bbb9bcb405, type: 2}
-  magicSphereModel: {fileID: 1164019294966772, guid: cc89a9fd17866bf4a84bb16f3342f3c1,
-    type: 2}
-  Sun: {fileID: 181841810}
-  ReflectionProbe: {fileID: 2115458094}
-  NightLights: []
+  ParticleEffects: []
 --- !u!1 &634149777
 GameObject:
   m_ObjectHideFlags: 0
@@ -106439,6 +106425,10 @@ Prefab:
       propertyPath: ShapeModule.m_MeshRenderer
       value: 
       objectReference: {fileID: 1294832382}
+    - target: {fileID: 1584937000666732, guid: 9f99eace8f2bafd4c99270ce4c10c7b7, type: 2}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: 9f99eace8f2bafd4c99270ce4c10c7b7, type: 2}
   m_IsPrefabParent: 0

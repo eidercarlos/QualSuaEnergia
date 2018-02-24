@@ -15,7 +15,7 @@ public class SceneHandler : MonoBehaviour
     public GameObject CanvasQryEmail;
     public InputField InputBarcode;
     private string idleSceneName = "Idle";
-    private string interactionSceneName = "MainInteraction";
+    private string interactionSceneName = "Darkness";
     private float timeLeftToGoIdle;
     private float timeOfInteractionStart;
     private float cursorPosition;
@@ -54,19 +54,16 @@ public class SceneHandler : MonoBehaviour
         }   
     }      
 
-    //string path = @"C:\Folder1\Folder2\Folder3\Folder4";
-    //string newPath = Path.GetFullPath(Path.Combine(path, @"..\..\"));
-    //Note This goes two levels up.The result would be:  newPath = @"C:\Folder1\Folder2\";
-
-    //A option: string directory = System.IO.Directory.GetParent(System.IO.Directory.GetParent(Environment.CurrentDirectory).ToString()).ToString();
-
     void Update()
     {      
         TimerHandler();
                     
+        //Its time to take the screen shot
         if( (isOnInteraction) && ((Time.time - timeOfInteractionStart) > ConfigItems.timeToPrintAfterStartInteraction) )
-        {   
+        {
             //StartCoroutine(ProcessPrint());
+            PauseScene();
+            SetActiveInputPanel(true);
         }   
     }      
 
@@ -137,8 +134,21 @@ public class SceneHandler : MonoBehaviour
 
         if (CanvasQryEmail != null)
         {
+            SetActiveInputPanel(true);
+        }
+    }
+
+    private void SetActiveInputPanel(bool isActive)
+    {
+        if(isActive)
+        {
             CanvasQryEmail.SetActive(true);
             InputBarcode.Select();
+        }
+        else
+        {
+            InputBarcode.text = "";
+            CanvasQryEmail.SetActive(false);
         }
     }
 
@@ -180,8 +190,7 @@ public class SceneHandler : MonoBehaviour
         yield return GetRequest(ConfigItems.APIRestURL+"?id="+InputBarcode.text);
         //Debug.Log("We have a total of: "+InputBarcode.text.Length+" characteres");
         //Store the inputbarcode text content into a string...
-        InputBarcode.text = "";
-        CanvasQryEmail.SetActive(false);
+        SetActiveInputPanel(false);
     }   
     
     private IEnumerator GetRequest(string uri)
@@ -213,5 +222,15 @@ public class SceneHandler : MonoBehaviour
     {   
         IdleStars.SetActive(true);
         IdleSun.SetActive(true);
+    }
+
+    private void PauseScene()
+    {   
+        Time.timeScale = 0;
+    }   
+
+    private void ContinueScene()
+    {   
+        Time.timeScale = 1;
     }   
 }

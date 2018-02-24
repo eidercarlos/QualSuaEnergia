@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -13,84 +14,91 @@ public class SphereInteraction : MonoBehaviour
     private int lastAngleIndex;
     private int currentEffectIndex;
 
-    public GameObject[] Effects;
-            
-    public GameObject magicSphereModel;
-    private GameObject magicSphereInstance;
+    public ParticleSystem[] ParticleEffects;
+    public ParticleSystem[] ParticleEmitters;
 
-    public Light Sun;
-    public ReflectionProbe ReflectionProbe;
-    public Light[] NightLights = new Light[0];
+    const float TOLERANCE = 0.0001f;
+    //static string[] colorProperties = { "_TintColor", "_Color", "_EmissionColor", "_BorderColor", "_ReflectColor", "_RimColor", "_MainColor", "_CoreColor", "_FresnelColor", "_CutoutColor" };
 
-    private float startSunIntensity;
-    private Quaternion startSunRotation;
-    private Color startAmbientLight;
-    private float startAmbientIntencity;
-    private float startReflectionIntencity;
-    private LightShadows startLightShadows;
+    public struct HSBColor
+    {
+        public float H;
+        public float S;
+        public float B;
+        public float A;
+
+        public HSBColor(float h, float s, float b, float a)
+        {
+            this.H = h;
+            this.S = s;
+            this.B = b;
+            this.A = a;
+        }
+    }
 
     void Start()
     {   
         lastAngle = transform.eulerAngles;
         lastAngleIndex = 0;
         currentEffectIndex = 0;
-        //GenerateNewEffect();
-        GoNight();
     }   
 
     void Update()
     {            
-        if(SceneHandler.Instance != null && SceneHandler.Instance.IsOnInteraction && magicSphereInstance != null)
+        if(SceneHandler.Instance != null && SceneHandler.Instance.IsOnInteraction)
         {   
             float hRotation = horizontalSpeed * Input.GetAxis("Mouse X");
             float vRotation = verticalSpeed * Input.GetAxis("Mouse Y");
 
-            if (SceneHandler.Instance.ConfigItems.invertAxisX)
+            if(SceneHandler.Instance.ConfigItems.invertAxisX)
                 hRotation = hRotation * (-1);
 
             if (SceneHandler.Instance.ConfigItems.invertAxisY)
                 vRotation = vRotation * (-1);
 
-            magicSphereInstance.transform.Rotate(vRotation, -hRotation, 0, Space.World);
-
-            if(magicSphereInstance.transform.hasChanged)
-            {   
-                var YangleOffset = magicSphereInstance.transform.eulerAngles.y - lastAngle.y;
-                float colorHUE = magicSphereInstance.transform.eulerAngles.x;
-
-                if(YangleOffset > 180) YangleOffset -= 360f;
-                if(YangleOffset < -180) YangleOffset += 360f;
-
-                lastAngle = magicSphereInstance.transform.eulerAngles;
-
-                totalAngleY += YangleOffset;
-
-                int currentIndexEffect = GetAngleIndex(totalAngleY);
-
-                if (currentIndexEffect > lastAngleIndex)
-                {
-                    ChangeCurrentEffect(+1);
-                }
-                else if (currentIndexEffect < lastAngleIndex)
-                {
-                    ChangeCurrentEffect(-1);
-                }
-
-                lastAngleIndex = currentIndexEffect;
+            transform.Rotate(vRotation, -hRotation, 0, Space.World);
+            
+            if(transform.hasChanged)
+            {         
+                float colorHUE = transform.eulerAngles.x;
+                float psEmission = transform.eulerAngles.y;
 
                 if(colorHUE > 0f)
-                {      
-                    var meshUpdater = magicSphereInstance.GetComponentInChildren<PSMeshRendererUpdater>();
-                    if(meshUpdater != null)
-                    {   
-                        meshUpdater.UpdateColor(colorHUE / 360f);
-                    }   
+                {   
+                    UpdateParticlesCollor(colorHUE / 360f);
                 }
-            }      
+                
+                if(psEmission > 0f)
+                {
+                    UpdateParticlesEmission(psEmission);
+                }
+            } 
         }
-        else if(magicSphereInstance != null)
-        {
-            Destroy(magicSphereInstance);
+    }
+
+    private void UpdateParticlesCollor(float HUEColor)
+    {   
+        foreach (var effects in ParticleEffects)
+        {   
+            effects.startColor = ConvertRGBColorByHUE(effects.startColor, HUEColor);
+        }
+    }  
+    
+    private void UpdateParticlesEmission(float emission)
+    {
+        foreach (var emitters in ParticleEmitters)
+        {   
+            ParticleSystem currentPs = emitters.GetComponent<ParticleSystem>();
+            var psEmission = currentPs.emission;
+            //float emissionOffset = 0f;
+
+            //if (emission <= 340)
+            //    emissionOffset = emission + 20;
+            //else
+            //    emissionOffset = 360f;
+
+            //psEmission.rateOverTime = UnityEngine.Random.Range(emission, emissionOffset);
+            psEmission.rateOverTime = emission;
         }
     }
 
@@ -104,70 +112,122 @@ public class SphereInteraction : MonoBehaviour
     private void ChangeCurrentEffect(int delta)
     {
         currentEffectIndex += delta;
-        if (currentEffectIndex > Effects.Length - 1)
+        if (currentEffectIndex > ParticleEffects.Length - 1)
             currentEffectIndex = 0;
         else if (currentEffectIndex < 0)
-            currentEffectIndex = Effects.Length - 1;
+            currentEffectIndex = ParticleEffects.Length - 1;
 
-        if (magicSphereInstance != null)
-        {
-            Destroy(magicSphereInstance);
-            RemoveClones();
-        }
-
-        //currentInstance = Instantiate(Prefabs[currentNomber]);
-
-        //Instantiation of the Character
-        /*
-        characterInstance = Instantiate(Character);
-        characterInstance.GetComponent<ME_AnimatorEvents>().EffectPrefab = Prefabs[currentNomber];
-        */
-
-        //Current Instantiation and Config of the Sphere
-        GenerateNewEffect();
     }
 
-    private void GenerateNewEffect()
-    {
-        magicSphereInstance = Instantiate(magicSphereModel);
-
-        var effectinstance = Instantiate(Effects[currentEffectIndex]);
-        effectinstance.transform.parent = magicSphereInstance.transform;
-        effectinstance.transform.localPosition = Vector3.zero;
-        effectinstance.transform.localRotation = new Quaternion();
-
-        var meshUpdater = effectinstance.GetComponent<PSMeshRendererUpdater>();
-        meshUpdater.UpdateMeshEffect(magicSphereInstance);
+    public static Color ConvertRGBColorByHUE(Color oldColor, float hue)
+    {   
+        var brightness = ColorToHSV(oldColor).B;
+        if (brightness < TOLERANCE)
+            brightness = TOLERANCE;
+        var hsv = ColorToHSV(oldColor/ brightness);
+        hsv.H = hue;
+        var color = HSVToColor(hsv) * brightness;
+        color.a = oldColor.a;
+        return color;
     }
 
-    private void RemoveClones()
-    {
-        var allGO = FindObjectsOfType<GameObject>();
-        foreach (var go in allGO)
+    public static HSBColor ColorToHSV(Color color)
+    {   
+        HSBColor ret = new HSBColor(0f, 0f, 0f, color.a);
+
+        float r = color.r;
+        float g = color.g;
+        float b = color.b;
+
+        float max = Mathf.Max(r, Mathf.Max(g, b));
+
+        if (max <= 0)
+            return ret;
+
+        float min = Mathf.Min(r, Mathf.Min(g, b));
+        float dif = max - min;
+
+        if (max > min)
         {
-            if (go.name.Contains("(Clone)")) Destroy(go);
+            if (Math.Abs(g - max) < TOLERANCE)
+                ret.H = (b - r) / dif * 60f + 120f;
+            else if (Math.Abs(b - max) < TOLERANCE)
+                ret.H = (r - g) / dif * 60f + 240f;
+            else if (b > g)
+                ret.H = (g - b) / dif * 60f + 360f;
+            else
+                ret.H = (g - b) / dif * 60f;
+            if (ret.H < 0)
+                ret.H = ret.H + 360f;
         }
+        else
+            ret.H = 0;
+
+        ret.H *= 1f / 360f;
+        ret.S = (dif / max) * 1f;
+        ret.B = max;
+
+        return ret;
     }
 
-    private void GoNight()
-    {
-        if(ReflectionProbe != null)
+    public static Color HSVToColor(HSBColor hsbColor)
+    {   
+        float r = hsbColor.B;
+        float g = hsbColor.B;
+        float b = hsbColor.B;
+        if (Math.Abs(hsbColor.S) > TOLERANCE)
         {
-            ReflectionProbe.RenderProbe();
+            float max = hsbColor.B;
+            float dif = hsbColor.B * hsbColor.S;
+            float min = hsbColor.B - dif;
+
+            float h = hsbColor.H * 360f;
+
+            if (h < 60f)
+            {
+                r = max;
+                g = h * dif / 60f + min;
+                b = min;
+            }
+            else if (h < 120f)
+            {
+                r = -(h - 120f) * dif / 60f + min;
+                g = max;
+                b = min;
+            }
+            else if (h < 180f)
+            {
+                r = min;
+                g = max;
+                b = (h - 120f) * dif / 60f + min;
+            }
+            else if (h < 240f)
+            {
+                r = min;
+                g = -(h - 240f) * dif / 60f + min;
+                b = max;
+            }
+            else if (h < 300f)
+            {
+                r = (h - 240f) * dif / 60f + min;
+                g = min;
+                b = max;
+            }
+            else if (h <= 360f)
+            {
+                r = max;
+                g = min;
+                b = -(h - 360f) * dif / 60 + min;
+            }
+            else
+            {
+                r = 0;
+                g = 0;
+                b = 0;
+            }
         }
 
-        Sun.intensity = 0.05f;
-        Sun.shadows = LightShadows.None;
-        foreach (var nightLight in NightLights)
-        {
-            nightLight.shadows = Sun.shadows;
-        }
-
-        Sun.transform.rotation = Quaternion.Euler(350, 30, 90);
-        RenderSettings.ambientLight = new Color(0.2f, 0.2f, 0.2f);
-        var lightInten = 1;
-        RenderSettings.ambientIntensity = lightInten;
-        RenderSettings.reflectionIntensity = 0.2f;
+        return new Color(Mathf.Clamp01(r), Mathf.Clamp01(g), Mathf.Clamp01(b), hsbColor.A);
     }
 
 }   

@@ -123,13 +123,25 @@ public static class ME_ColorHelper
 
     public static Color ConvertRGBColorByHUE(Color rgbColor, float hue)
     {
+        //1 - Transforma a cor atual em HSV, retornando o valor B (brightness)
         var brightness = ColorToHSV(rgbColor).B;
+
+        //2 - Verifica se está abaixo do tolerável e ajusta se necessário
         if (brightness < TOLERANCE)
             brightness = TOLERANCE;
+
+        //3 - Obter o valor HSV, dessa vez dividindo a cor atual por brightness
         var hsv = ColorToHSV(rgbColor / brightness);
+
+        //4 - Altera a propriedade H e atribui o novo valor hue
         hsv.H = hue;
+
+        //5 - Cria um novo valor de cor onde é multiplicado a cor usando o HSV por brightness
         var color = HSVToColor(hsv) * brightness;
+
+        //6 - Atribuir ao valor a dessa nova cor o valor da cor anterior.
         color.a = rgbColor.a;
+
         return color;
     }
 

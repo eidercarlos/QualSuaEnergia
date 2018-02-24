@@ -1,7 +1,7 @@
 {
 	"timeToPrintAfterStartInteraction": 8,
-	"timeToGetIdle" : 12,
-	"printScrPath" : "C:/",
+	"timeToGetIdle": 12,
+	"printScrPath" : "C:/tmp/postal_social",
 	"printScrFileName": "A_Nice_Picture",
 	"printScrQualityLevel": 3,
 	"APIRestURL" : "http://localhost/rest_api/users/read_one.php",

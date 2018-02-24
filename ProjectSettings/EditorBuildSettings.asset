@@ -14,3 +14,6 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/MainInteraction.unity
     guid: 388fac8ff0a3fff40b65fbd2de1604e4
+  - enabled: 1
+    path: Assets/Scenes/Darkness.unity
+    guid: d396478add7ec4649a42bd8a2cb616fd
