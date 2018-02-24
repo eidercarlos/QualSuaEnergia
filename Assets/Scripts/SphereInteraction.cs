@@ -4,21 +4,27 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class SphereInteraction : MonoBehaviour
-{   
-    
-    private float horizontalSpeed = 2.0f;
-    private float verticalSpeed = 2.0f;
+{
 
-    private Vector3 lastAngle;
-    private float totalAngleY = 0f;
-    private int lastAngleIndex;
-    private int currentEffectIndex;
+    private bool isParticlesFreezed = false;
+    public bool IsParticlesFreezed
+    {
+        get
+        {
+            return isParticlesFreezed;
+        }
 
+        private set
+        {
+            isParticlesFreezed = value;
+        }
+    }
+
+    public ParticleSystem[] AllParticles;
     public ParticleSystem[] ParticleEffects;
     public ParticleSystem[] ParticleEmitters;
 
     const float TOLERANCE = 0.0001f;
-    //static string[] colorProperties = { "_TintColor", "_Color", "_EmissionColor", "_BorderColor", "_ReflectColor", "_RimColor", "_MainColor", "_CoreColor", "_FresnelColor", "_CutoutColor" };
 
     public struct HSBColor
     {
@@ -36,24 +42,17 @@ public class SphereInteraction : MonoBehaviour
         }
     }
 
-    void Start()
-    {   
-        lastAngle = transform.eulerAngles;
-        lastAngleIndex = 0;
-        currentEffectIndex = 0;
-    }   
-
     void Update()
     {            
         if(SceneHandler.Instance != null && SceneHandler.Instance.IsOnInteraction)
         {   
-            float hRotation = horizontalSpeed * Input.GetAxis("Mouse X");
-            float vRotation = verticalSpeed * Input.GetAxis("Mouse Y");
+            float hRotation = SceneHandler.Instance.ConfigItems.horizontal_speed * Input.GetAxis("Mouse X");
+            float vRotation = SceneHandler.Instance.ConfigItems.vertical_speed * Input.GetAxis("Mouse Y");
 
-            if(SceneHandler.Instance.ConfigItems.invertAxisX)
+            if(SceneHandler.Instance.ConfigItems.invert_axis_x)
                 hRotation = hRotation * (-1);
 
-            if (SceneHandler.Instance.ConfigItems.invertAxisY)
+            if (SceneHandler.Instance.ConfigItems.invert_axis_y)
                 vRotation = vRotation * (-1);
 
             transform.Rotate(vRotation, -hRotation, 0, Space.World);
@@ -74,7 +73,22 @@ public class SphereInteraction : MonoBehaviour
                 }
             } 
         }
+
+        if(!SceneHandler.Instance.IsOnInteraction && !IsParticlesFreezed)
+        {
+            FreezeParticles();
+        }
     }
+
+    private void FreezeParticles()
+    {
+        foreach (var particles in AllParticles)
+        {
+            particles.Pause();
+        }
+
+        IsParticlesFreezed = true;
+    }   
 
     private void UpdateParticlesCollor(float HUEColor)
     {   
@@ -90,14 +104,6 @@ public class SphereInteraction : MonoBehaviour
         {   
             ParticleSystem currentPs = emitters.GetComponent<ParticleSystem>();
             var psEmission = currentPs.emission;
-            //float emissionOffset = 0f;
-
-            //if (emission <= 340)
-            //    emissionOffset = emission + 20;
-            //else
-            //    emissionOffset = 360f;
-
-            //psEmission.rateOverTime = UnityEngine.Random.Range(emission, emissionOffset);
             psEmission.rateOverTime = emission;
         }
     }
@@ -107,16 +113,6 @@ public class SphereInteraction : MonoBehaviour
     {   
         int angleIdx = (int)(angles/360);
         return angleIdx;
-    }
-
-    private void ChangeCurrentEffect(int delta)
-    {
-        currentEffectIndex += delta;
-        if (currentEffectIndex > ParticleEffects.Length - 1)
-            currentEffectIndex = 0;
-        else if (currentEffectIndex < 0)
-            currentEffectIndex = ParticleEffects.Length - 1;
-
     }
 
     public static Color ConvertRGBColorByHUE(Color oldColor, float hue)

@@ -249,6 +249,21 @@ Prefab:
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: 4273043c51641f54899ca6698a266f4b, type: 2}
   m_IsPrefabParent: 0
+--- !u!198 &41957947 stripped
+ParticleSystem:
+  m_PrefabParentObject: {fileID: 198494157871555248, guid: 4273043c51641f54899ca6698a266f4b,
+    type: 2}
+  m_PrefabInternal: {fileID: 41957946}
+--- !u!198 &41957948 stripped
+ParticleSystem:
+  m_PrefabParentObject: {fileID: 198495747495947176, guid: 4273043c51641f54899ca6698a266f4b,
+    type: 2}
+  m_PrefabInternal: {fileID: 41957946}
+--- !u!198 &41957949 stripped
+ParticleSystem:
+  m_PrefabParentObject: {fileID: 198632009424357194, guid: 4273043c51641f54899ca6698a266f4b,
+    type: 2}
+  m_PrefabInternal: {fileID: 41957946}
 --- !u!198 &499876795 stripped
 ParticleSystem:
   m_PrefabParentObject: {fileID: 198161515808106734, guid: 4273043c51641f54899ca6698a266f4b,
@@ -345,6 +360,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e94c33821bc810743b2859c59d0c525d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  AllParticles:
+  - {fileID: 499876795}
+  - {fileID: 2046771233}
+  - {fileID: 41957949}
+  - {fileID: 1393909959}
+  - {fileID: 692442605}
+  - {fileID: 41957948}
+  - {fileID: 41957947}
+  - {fileID: 783377602}
   ParticleEffects:
   - {fileID: 499876795}
   - {fileID: 2046771233}

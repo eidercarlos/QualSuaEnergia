@@ -14,12 +14,14 @@ Devemos ter um arquivo de configuração chamado settings.json que abriga as seg
 
 public class Settings
 {   
-    public float timeToPrintAfterStartInteraction;
-    public float timeToGetIdle;
-    public string printScrPath;
-    public string printScrFileName;
-    public int printScrQualityLevel;
-    public string APIRestURL;
-    public bool invertAxisX;
-    public bool invertAxisY;
+    public float time_print_after_start_interaction;
+    public float time_get_idle;
+    public string print_path;
+    public string print_file_name;
+    public int print_quality_level;
+    public string rest_api_url;
+    public bool invert_axis_x;
+    public bool invert_axis_y;
+    public float horizontal_speed;
+    public float vertical_speed;
 }

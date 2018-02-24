@@ -8,7 +8,7 @@ using Newtonsoft;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using UnityEngine.Networking;
-
+using System;
 
 public class SceneHandler : MonoBehaviour
 {   
@@ -24,6 +24,7 @@ public class SceneHandler : MonoBehaviour
     private string printScrFileName;
     public GameObject IdleStars;
     public GameObject IdleSun;
+    private Users currentUser;
 
     public static SceneHandler Instance { get; set; }
     public Settings ConfigItems { get; set; }
@@ -37,12 +38,12 @@ public class SceneHandler : MonoBehaviour
     }   
 
     void Awake ()
-    {
+    {   
         Instance = this;
         
         //Load the configurations from settings.json
         using(StreamReader jsonFile = new StreamReader("settings.json"))
-        {   
+        {         
             string jsonFileContent = jsonFile.ReadToEnd();
             ConfigItems = JsonConvert.DeserializeObject<Settings>(jsonFileContent);            
         }   
@@ -52,18 +53,17 @@ public class SceneHandler : MonoBehaviour
         {   
             SceneManager.LoadScene(idleSceneName, LoadSceneMode.Additive);                            
         }   
-    }      
+    }   
 
     void Update()
-    {      
+    {   
         TimerHandler();
-                    
+        
         //Its time to take the screen shot
-        if( (isOnInteraction) && ((Time.time - timeOfInteractionStart) > ConfigItems.timeToPrintAfterStartInteraction) )
-        {
-            //StartCoroutine(ProcessPrint());
-            PauseScene();
-            SetActiveInputPanel(true);
+        if( (isOnInteraction) && ((Time.time - timeOfInteractionStart) > ConfigItems.time_print_after_start_interaction) )
+        {   
+            PauseScene();            
+            ActiveBarcodeReader();
         }   
     }      
 
@@ -81,12 +81,13 @@ public class SceneHandler : MonoBehaviour
             timeLeftToGoIdle -= Time.deltaTime;
             if(timeLeftToGoIdle < 0)
             {   
-                timeLeftToGoIdle = ConfigItems.timeToGetIdle;
+                timeLeftToGoIdle = ConfigItems.time_get_idle;
                 Cursor.visible = false;
                 catchCursor = true;
 
                 if(!SceneManager.GetSceneByName(idleSceneName).isLoaded)
-                {
+                {   
+                    SetActiveInputPanel(false);
                     ActivateIdleObjects();
                     LoadTheScene(idleSceneName, interactionSceneName);
                     isOnInteraction = false;
@@ -95,7 +96,7 @@ public class SceneHandler : MonoBehaviour
         }   
         else //In case of the user is interacting with something....
         {   
-            timeLeftToGoIdle = ConfigItems.timeToGetIdle;
+            timeLeftToGoIdle = ConfigItems.time_get_idle;
             Cursor.visible = true;
 
             if(!SceneManager.GetSceneByName(interactionSceneName).isLoaded)
@@ -115,60 +116,61 @@ public class SceneHandler : MonoBehaviour
         SceneManager.LoadScene(sceneToLoadName, LoadSceneMode.Additive);
     }   
 
-    private IEnumerator ProcessPrint()
+    private void ActiveBarcodeReader()
     {   
-        Debug.Log("Taking a picture...");
-        isOnInteraction = false;
-
         //Adds a listener to the input field and invokes a method when the value changes.
         if(InputBarcode != null)
-        {
+        {   
             InputBarcode.onValueChanged.AddListener(delegate { InputBarcodeEndEdit(); });
-        }
+        }   
         else
-        {
+        {   
             Debug.Log("Objeto Input não encontrado ou associado...");
-        }
+        }   
 
-        yield return TakeScreenShot();
-
-        if (CanvasQryEmail != null)
+        if(CanvasQryEmail != null)
         {
             SetActiveInputPanel(true);
         }
     }
 
     private void SetActiveInputPanel(bool isActive)
-    {
+    {   
         if(isActive)
-        {
+        {   
             CanvasQryEmail.SetActive(true);
             InputBarcode.Select();
-        }
+            InputBarcode.ActivateInputField();
+        }   
         else
-        {
+        {   
             InputBarcode.text = "";
             CanvasQryEmail.SetActive(false);
-        }
-    }
+        }   
+    }   
+    
+    private IEnumerator TakeScreenShot(Users currentUser)
+    {   
+        printScrFileName = ConfigItems.print_file_name+ System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
 
-    private IEnumerator TakeScreenShot()
-    {
-        //Debug.Log(Application.persistentDataPath);
-        //Debug.Log(Application.dataPath); //D:/Projetos/QualSuaEnergia/QualSuaEnergia/Assets
-        //Debug.Log(System.IO.Directory.GetDirectoryRoot(Application.dataPath));
-        //System.IO.File.Move(printScrFileName, printScrPath+printScrFileName);
-        //string defaultPath = Application.dataPath; //D:\Projetos\QualSuaEnergia\QualSuaEnergia\Assets
-        //printScrPath = Path.GetFullPath(Path.Combine(defaultPath, @"..\..\"));
-        printScrFileName = "Screenshot_" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
-
-        //string printScrFile = Path.Combine(ConfigItems.printScrPath, ConfigItems.printScrFileName);
-        ScreenCapture.CaptureScreenshot(printScrFileName, ConfigItems.printScrQualityLevel);
+        //string printScrFile = Path.Combine(ConfigItems.print_path, ConfigItems.print_file_name);
+        ScreenCapture.CaptureScreenshot(printScrFileName, ConfigItems.print_quality_level);
         
         while (!System.IO.File.Exists(printScrFileName))
             yield return null;
 
-        Debug.Log("Print Sucesso!");
+        try
+        {   
+            string pathToSave = @ConfigItems.print_path + currentUser.email;
+            System.IO.Directory.CreateDirectory(pathToSave);
+            File.Move(printScrFileName, Path.Combine(pathToSave, printScrFileName));
+            
+            Debug.Log("Print Sucesso!");
+        }
+        catch (Exception e)
+        {
+            Debug.Log("The process failed: {0}"+ e.Message);
+        }
     }
 
     //Invoked when the value of the text field changes.
@@ -176,33 +178,41 @@ public class SceneHandler : MonoBehaviour
     private void InputBarcodeEndEdit()
     {   
         if(InputBarcode.text.Length > 0)
-        {
+        {   
+            Debug.Log("Changing the barcode...");
             //Remove all listener so it can't be called another time...
             InputBarcode.onValueChanged.RemoveAllListeners();
-            StartCoroutine(ProcessInputBarcode());
+            StartCoroutine(ProcessBarcodeInput());
         }   
     } 
-    
-    private IEnumerator ProcessInputBarcode()
+                
+    private IEnumerator ProcessBarcodeInput()
     {   
-        yield return new WaitForSeconds(2f);
-        
-        yield return GetRequest(ConfigItems.APIRestURL+"?id="+InputBarcode.text);
-        //Debug.Log("We have a total of: "+InputBarcode.text.Length+" characteres");
-        //Store the inputbarcode text content into a string...
+        yield return new WaitForSeconds(1.5f);
+        yield return GetRequest(ConfigItems.rest_api_url+InputBarcode.text);
         SetActiveInputPanel(false);
-    }   
-    
+    }
+
     private IEnumerator GetRequest(string uri)
-    {   
+    {
         UnityWebRequest request = UnityWebRequest.Get(uri);
-        yield return request.SendWebRequest();
+        request.SendWebRequest();
 
-        Users user = JsonConvert.DeserializeObject<Users>(request.downloadHandler.text);
-        Debug.Log(request.downloadHandler.text);
+        while (!request.isDone)
+            yield return null;
+        
+        if(!request.isHttpError && !request.isNetworkError)
+        {   
+            string jsonResult = request.downloadHandler.text;
+            Users currentUser = JsonConvert.DeserializeObject<Users>(jsonResult);
 
-        // Show results as text        
-        Debug.Log(request.downloadHandler.text);
+            //Debug.Log(currentUser.nome);
+            yield return TakeScreenShot(currentUser);
+        }   
+        else
+        {   
+            Debug.Log("Erro na requisição dos dados da API REST:"+request.error);
+        }   
     }
 
     private string FormatPath(string path)
@@ -225,12 +235,12 @@ public class SceneHandler : MonoBehaviour
     }
 
     private void PauseScene()
-    {   
-        Time.timeScale = 0;
+    {
+        isOnInteraction = false;
     }   
 
     private void ContinueScene()
-    {   
-        Time.timeScale = 1;
-    }   
+    {
+        isOnInteraction = true;
+    }
 }
