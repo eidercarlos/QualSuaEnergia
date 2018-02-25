@@ -13,9 +13,13 @@ using System;
 public class SceneHandler : MonoBehaviour
 {   
     public GameObject CanvasQryEmail;
+    public GameObject CanvasLogo;
+    public GameObject CanvasTop;
+    public GameObject CanvasFooter;
     public InputField InputBarcode;
+    public Text TxtUsername;
     private string idleSceneName = "Idle";
-    private string interactionSceneName = "Darkness";
+    private string interactionSceneName = "Interaction";
     private float timeLeftToGoIdle;
     private float timeOfInteractionStart;
     private float cursorPosition;
@@ -149,30 +153,6 @@ public class SceneHandler : MonoBehaviour
         }   
     }   
     
-    private IEnumerator TakeScreenShot(Users currentUser)
-    {   
-        printScrFileName = ConfigItems.print_file_name+ System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
-
-        //string printScrFile = Path.Combine(ConfigItems.print_path, ConfigItems.print_file_name);
-        ScreenCapture.CaptureScreenshot(printScrFileName, ConfigItems.print_quality_level);
-        
-        while (!System.IO.File.Exists(printScrFileName))
-            yield return null;
-
-        try
-        {   
-            string pathToSave = @ConfigItems.print_path + currentUser.email;
-            System.IO.Directory.CreateDirectory(pathToSave);
-            File.Move(printScrFileName, Path.Combine(pathToSave, printScrFileName));
-            
-            Debug.Log("Print Sucesso!");
-        }
-        catch (Exception e)
-        {
-            Debug.Log("The process failed: {0}"+ e.Message);
-        }
-    }
-
     //Invoked when the value of the text field changes.
     //Wait some time after the last change (char) and call a function to submit the value...
     private void InputBarcodeEndEdit()
@@ -188,7 +168,7 @@ public class SceneHandler : MonoBehaviour
                 
     private IEnumerator ProcessBarcodeInput()
     {   
-        yield return new WaitForSeconds(1.5f);
+        yield return new WaitForSeconds(1f);
         yield return GetRequest(ConfigItems.rest_api_url+InputBarcode.text);
         SetActiveInputPanel(false);
     }
@@ -205,14 +185,39 @@ public class SceneHandler : MonoBehaviour
         {   
             string jsonResult = request.downloadHandler.text;
             Users currentUser = JsonConvert.DeserializeObject<Users>(jsonResult);
-
-            //Debug.Log(currentUser.nome);
+            
+            if(CanvasQryEmail.activeInHierarchy)
+                SetActiveInputPanel(false);
+                                 
             yield return TakeScreenShot(currentUser);
         }   
         else
         {   
             Debug.Log("Erro na requisição dos dados da API REST:"+request.error);
         }   
+    }   
+
+    private IEnumerator TakeScreenShot(Users currentUser)
+    {   
+        printScrFileName = ConfigItems.print_file_name + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
+        string printScrPath = Path.Combine(Application.dataPath, printScrFileName);
+        ScreenCapture.CaptureScreenshot(printScrPath, ConfigItems.print_quality_level);
+
+        while (!System.IO.File.Exists(printScrPath))
+            yield return null;
+
+        try
+        {   
+            string pathToSave = @ConfigItems.print_path + currentUser.email;
+            System.IO.Directory.CreateDirectory(pathToSave);
+            File.Move(printScrPath, Path.Combine(pathToSave, printScrFileName));
+
+            Debug.Log("Print Sucesso!");
+        }
+        catch (Exception e)
+        {
+            Debug.Log("The process failed: {0}" + e.Message);
+        }
     }
 
     private string FormatPath(string path)
