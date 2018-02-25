@@ -12,7 +12,7 @@ using System;
 
 public class SceneHandler : MonoBehaviour
 {   
-    public GameObject CanvasQryEmail;
+    public GameObject CanvasBarcode;
     public GameObject CanvasLogo;
     public GameObject CanvasTop;
     public GameObject CanvasFooter;
@@ -26,8 +26,6 @@ public class SceneHandler : MonoBehaviour
     private bool catchCursor = true;
     private bool isOnInteraction = false;
     private string printScrFileName;
-    public GameObject IdleStars;
-    public GameObject IdleSun;
     private Users currentUser;
 
     public static SceneHandler Instance { get; set; }
@@ -92,7 +90,6 @@ public class SceneHandler : MonoBehaviour
                 if(!SceneManager.GetSceneByName(idleSceneName).isLoaded)
                 {   
                     SetActiveInputPanel(false);
-                    ActivateIdleObjects();
                     LoadTheScene(idleSceneName, interactionSceneName);
                     isOnInteraction = false;
                 }   
@@ -106,7 +103,6 @@ public class SceneHandler : MonoBehaviour
             if(!SceneManager.GetSceneByName(interactionSceneName).isLoaded)
             {   
                 LoadTheScene(interactionSceneName, idleSceneName);
-                DeactivateIdleObjects();
                 timeOfInteractionStart = Time.time;
                 isOnInteraction = true;
             }
@@ -132,7 +128,7 @@ public class SceneHandler : MonoBehaviour
             Debug.Log("Objeto Input não encontrado ou associado...");
         }   
 
-        if(CanvasQryEmail != null)
+        if(CanvasBarcode != null)
         {
             SetActiveInputPanel(true);
         }
@@ -142,14 +138,14 @@ public class SceneHandler : MonoBehaviour
     {   
         if(isActive)
         {   
-            CanvasQryEmail.SetActive(true);
+            CanvasBarcode.SetActive(true);
             InputBarcode.Select();
             InputBarcode.ActivateInputField();
         }   
         else
         {   
             InputBarcode.text = "";
-            CanvasQryEmail.SetActive(false);
+            CanvasBarcode.SetActive(false);
         }   
     }   
     
@@ -178,27 +174,53 @@ public class SceneHandler : MonoBehaviour
         UnityWebRequest request = UnityWebRequest.Get(uri);
         request.SendWebRequest();
 
-        while (!request.isDone)
+        while(!request.isDone)
             yield return null;
-        
+
         if(!request.isHttpError && !request.isNetworkError)
-        {   
+        {      
+            if(CanvasBarcode.activeInHierarchy)
+                SetActiveInputPanel(false);
+            
             string jsonResult = request.downloadHandler.text;
             Users currentUser = JsonConvert.DeserializeObject<Users>(jsonResult);
-            
-            if(CanvasQryEmail.activeInHierarchy)
-                SetActiveInputPanel(false);
-                                 
-            yield return TakeScreenShot(currentUser);
+                            
+            if(currentUser.nome != "" && currentUser.nome != null)
+            {   
+                ShowUserNameCanvas(currentUser);
+
+                yield return TakeScreenShot(currentUser);
+            }   
+            else
+            {                  
+                //O código de barras não retornou nenhum registro...
+                Debug.Log("A consulta não retornou nenhum usuário, Tente novamente fazer a leitura...");
+
+            }      
+
         }   
         else
         {   
-            Debug.Log("Erro na requisição dos dados da API REST:"+request.error);
+            Debug.Log("Erro na requisição dos dados da API REST:"+request.error);            
         }   
-    }   
+    }
+                        
+    private void ShowUserNameCanvas(Users user)
+    {   
+        CanvasFooter.SetActive(true);
+        TxtUsername.text = user.nome.ToUpper();
+    }
+    
+    private void HideUserNameCanvas()
+    {
+        CanvasFooter.SetActive(false);
+        TxtUsername.text = "";
+    }
 
     private IEnumerator TakeScreenShot(Users currentUser)
     {   
+        bool printSuccess = true;
+
         printScrFileName = ConfigItems.print_file_name + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
         string printScrPath = Path.Combine(Application.dataPath, printScrFileName);
         ScreenCapture.CaptureScreenshot(printScrPath, ConfigItems.print_quality_level);
@@ -216,27 +238,42 @@ public class SceneHandler : MonoBehaviour
         }
         catch (Exception e)
         {
+            printSuccess = false;
             Debug.Log("The process failed: {0}" + e.Message);
         }
+
+        if(printSuccess)
+        {   
+
+            yield return ReturnToIdle();
+        }   
+        else
+        {   
+            Debug.Log("Lets try again...");
+        }   
     }
+
+    private IEnumerator ShowSuccess()
+    {
+        yield return null;
+    }
+
+    private IEnumerator ReturnToIdle()
+    {      
+        yield return new WaitForSeconds(4f);
+        HideUserNameCanvas();
+        SetActiveInputPanel(false);
+        isOnInteraction = false;
+        if (CanvasFooter.activeInHierarchy)
+            CanvasFooter.SetActive(false);
+        LoadTheScene(idleSceneName, interactionSceneName);
+    }   
 
     private string FormatPath(string path)
     {
         string newPath = path.Replace("/", "\\");
 
         return newPath;
-    }
-
-    public void DeactivateIdleObjects()
-    {   
-        IdleStars.SetActive(false);
-        IdleSun.SetActive(false);
-    }   
-
-    public void ActivateIdleObjects()
-    {   
-        IdleStars.SetActive(true);
-        IdleSun.SetActive(true);
     }
 
     private void PauseScene()
