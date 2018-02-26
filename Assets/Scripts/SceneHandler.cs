@@ -16,8 +16,12 @@ public class SceneHandler : MonoBehaviour
     public GameObject CanvasLogo;
     public GameObject CanvasTop;
     public GameObject CanvasFooter;
+    public GameObject CanvasInteractionMsg;
+    public GameObject CanvasSuccess;
+    public GameObject CanvasError;
     public InputField InputBarcode;
     public Text TxtUsername;
+    public Text TxtError;
     private string idleSceneName = "Idle";
     private string interactionSceneName = "Interaction";
     private float timeLeftToGoIdle;
@@ -32,7 +36,7 @@ public class SceneHandler : MonoBehaviour
     public Settings ConfigItems { get; set; }
 
     public bool IsOnInteraction
-    {   
+    {      
         get
         {   
             return isOnInteraction;
@@ -41,11 +45,12 @@ public class SceneHandler : MonoBehaviour
 
     void Awake ()
     {   
+        Cursor.visible = false;
         Instance = this;
-        
+                        
         //Load the configurations from settings.json
         using(StreamReader jsonFile = new StreamReader("settings.json"))
-        {         
+        {            
             string jsonFileContent = jsonFile.ReadToEnd();
             ConfigItems = JsonConvert.DeserializeObject<Settings>(jsonFileContent);            
         }   
@@ -53,7 +58,11 @@ public class SceneHandler : MonoBehaviour
         //Check if the Idle scene is already loaded
         if(!SceneManager.GetSceneByName(idleSceneName).isLoaded)
         {   
-            SceneManager.LoadScene(idleSceneName, LoadSceneMode.Additive);                            
+            SceneManager.LoadScene(idleSceneName, LoadSceneMode.Additive);
+            if(!CanvasInteractionMsg.activeInHierarchy || !CanvasTop.activeInHierarchy)
+            {   
+                SetActiveIdleCanvas(true);
+            }
         }   
     }   
 
@@ -63,7 +72,7 @@ public class SceneHandler : MonoBehaviour
         
         //Its time to take the screen shot
         if( (isOnInteraction) && ((Time.time - timeOfInteractionStart) > ConfigItems.time_print_after_start_interaction) )
-        {   
+        {      
             PauseScene();            
             ActiveBarcodeReader();
         }   
@@ -88,9 +97,10 @@ public class SceneHandler : MonoBehaviour
                 catchCursor = true;
 
                 if(!SceneManager.GetSceneByName(idleSceneName).isLoaded)
-                {   
+                {      
                     SetActiveInputPanel(false);
                     LoadTheScene(idleSceneName, interactionSceneName);
+                    SetActiveIdleCanvas(true);
                     isOnInteraction = false;
                 }   
             }   
@@ -98,11 +108,11 @@ public class SceneHandler : MonoBehaviour
         else //In case of the user is interacting with something....
         {   
             timeLeftToGoIdle = ConfigItems.time_get_idle;
-            Cursor.visible = true;
 
             if(!SceneManager.GetSceneByName(interactionSceneName).isLoaded)
             {   
                 LoadTheScene(interactionSceneName, idleSceneName);
+                SetActiveIdleCanvas(false);
                 timeOfInteractionStart = Time.time;
                 isOnInteraction = true;
             }
@@ -154,8 +164,11 @@ public class SceneHandler : MonoBehaviour
     private void InputBarcodeEndEdit()
     {   
         if(InputBarcode.text.Length > 0)
-        {   
+        {
             Debug.Log("Changing the barcode...");
+            
+            //Increasing the time left to get idle to prevent from get idle...
+            timeLeftToGoIdle = ConfigItems.time_get_idle;
             //Remove all listener so it can't be called another time...
             InputBarcode.onValueChanged.RemoveAllListeners();
             StartCoroutine(ProcessBarcodeInput());
@@ -164,10 +177,9 @@ public class SceneHandler : MonoBehaviour
                 
     private IEnumerator ProcessBarcodeInput()
     {   
-        yield return new WaitForSeconds(1f);
-        yield return GetRequest(ConfigItems.rest_api_url+InputBarcode.text);
-        SetActiveInputPanel(false);
-    }
+        yield return new WaitForSeconds(1.3f);
+        yield return GetRequest(ConfigItems.rest_api_url+InputBarcode.text);        
+    }   
 
     private IEnumerator GetRequest(string uri)
     {
@@ -179,14 +191,14 @@ public class SceneHandler : MonoBehaviour
 
         if(!request.isHttpError && !request.isNetworkError)
         {      
-            if(CanvasBarcode.activeInHierarchy)
-                SetActiveInputPanel(false);
-            
             string jsonResult = request.downloadHandler.text;
             Users currentUser = JsonConvert.DeserializeObject<Users>(jsonResult);
                             
             if(currentUser.nome != "" && currentUser.nome != null)
             {   
+                if(CanvasBarcode.activeInHierarchy)
+                    SetActiveInputPanel(false);
+
                 ShowUserNameCanvas(currentUser);
 
                 yield return TakeScreenShot(currentUser);
@@ -195,14 +207,23 @@ public class SceneHandler : MonoBehaviour
             {                  
                 //O código de barras não retornou nenhum registro...
                 Debug.Log("A consulta não retornou nenhum usuário, Tente novamente fazer a leitura...");
+                InputBarcode.text = "";
+                if (!CanvasBarcode.activeInHierarchy)
+                    CanvasBarcode.SetActive(true);
 
-            }      
+                ActiveBarcodeReader();
+            }
 
         }   
         else
         {   
-            Debug.Log("Erro na requisição dos dados da API REST:"+request.error);            
-        }   
+            Debug.Log("Erro na requisição dos dados da API REST:"+request.error);
+            InputBarcode.text = "";
+            if (!CanvasBarcode.activeInHierarchy)
+                CanvasBarcode.SetActive(true);
+
+            ActiveBarcodeReader();
+        }
     }
                         
     private void ShowUserNameCanvas(Users user)
@@ -244,7 +265,6 @@ public class SceneHandler : MonoBehaviour
 
         if(printSuccess)
         {   
-
             yield return ReturnToIdle();
         }   
         else
@@ -267,7 +287,23 @@ public class SceneHandler : MonoBehaviour
         if (CanvasFooter.activeInHierarchy)
             CanvasFooter.SetActive(false);
         LoadTheScene(idleSceneName, interactionSceneName);
-    }   
+        SetActiveIdleCanvas(true);
+    } 
+    
+    private void SetActiveIdleCanvas(bool key)
+    {
+        if(key)
+        {
+            CanvasTop.SetActive(true);
+            CanvasInteractionMsg.SetActive(true);
+        }
+        else
+        {
+            CanvasTop.SetActive(false);
+            CanvasInteractionMsg.SetActive(false);
+        }
+
+    }
 
     private string FormatPath(string path)
     {
