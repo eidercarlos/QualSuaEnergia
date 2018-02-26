@@ -31,6 +31,7 @@ public class SceneHandler : MonoBehaviour
     private bool isOnInteraction = false;
     private string printScrFileName;
     private Users currentUser;
+    private Users userFromJsonFile;
 
     public static SceneHandler Instance { get; set; }
     public Settings ConfigItems { get; set; }
@@ -54,12 +55,12 @@ public class SceneHandler : MonoBehaviour
             string jsonFileContent = jsonFile.ReadToEnd();
             ConfigItems = JsonConvert.DeserializeObject<Settings>(jsonFileContent);            
         }   
-
+        
         //Check if the Idle scene is already loaded
         if(!SceneManager.GetSceneByName(idleSceneName).isLoaded)
         {   
             SceneManager.LoadScene(idleSceneName, LoadSceneMode.Additive);
-            if(!CanvasInteractionMsg.activeInHierarchy || !CanvasTop.activeInHierarchy)
+            if(!CanvasInteractionMsg.activeSelf || !CanvasTop.activeSelf)
             {   
                 SetActiveIdleCanvas(true);
             }
@@ -122,8 +123,26 @@ public class SceneHandler : MonoBehaviour
     private void LoadTheScene(string sceneToLoadName, string sceneToUnloadName)
     {   
         Scene sceneToUnload = SceneManager.GetSceneByName(sceneToUnloadName);
-        SceneManager.UnloadSceneAsync(sceneToUnload);
+        SceneManager.UnloadScene(sceneToUnload);
         SceneManager.LoadScene(sceneToLoadName, LoadSceneMode.Additive);
+
+        //var unloadOperation = @SceneManager.UnloadSceneAsync(sceneToUnload);
+        //unloadOperation.allowSceneActivation = false;
+        //while (!unloadOperation.isDone)
+        //{
+        //    yield return null;
+
+        //}
+        
+        /*
+        var loadOperation = SceneManager.LoadSceneAsync(sceneToLoadName, LoadSceneMode.Additive);
+        while (!loadOperation.isDone)
+        {
+            yield return null;
+            //if (!loadOperation.isDone)
+            //    SceneManager.LoadScene(sceneToLoadName, LoadSceneMode.Additive);
+        }
+        */
     }   
 
     private void ActiveBarcodeReader()
@@ -164,22 +183,67 @@ public class SceneHandler : MonoBehaviour
     private void InputBarcodeEndEdit()
     {   
         if(InputBarcode.text.Length > 0)
-        {
-            Debug.Log("Changing the barcode...");
-            
+        {   
+            //Debug.Log("Changing the barcode...");
+
             //Increasing the time left to get idle to prevent from get idle...
-            timeLeftToGoIdle = ConfigItems.time_get_idle;
+            ResetTimeLeftToIdle();
             //Remove all listener so it can't be called another time...
             InputBarcode.onValueChanged.RemoveAllListeners();
             StartCoroutine(ProcessBarcodeInput());
         }   
-    } 
-                
+    }
+    
+    private void ResetTimeLeftToIdle()
+    {
+        timeLeftToGoIdle = ConfigItems.time_get_idle;
+    }
+
     private IEnumerator ProcessBarcodeInput()
-    {   
+    {         
         yield return new WaitForSeconds(1.3f);
-        yield return GetRequest(ConfigItems.rest_api_url+InputBarcode.text);        
-    }   
+        //yield return GetRequest(ConfigItems.rest_api_url+InputBarcode.text);      
+        yield return ReadJsonUserData(InputBarcode.text);
+    }
+    
+    private IEnumerator ReadJsonUserData(string barcodeText)
+    {
+        if(barcodeText != "" && barcodeText != null)
+        {
+            int userId;
+            if (int.TryParse(barcodeText, out userId))
+            {
+                //Load the configurations from settings.json
+                using (StreamReader jsonFile = new StreamReader("contatos.json"))
+                {
+                    string jsonFileContent = jsonFile.ReadToEnd();
+                    userFromJsonFile = JsonConvert.DeserializeObject<Users>(jsonFileContent);
+                }
+
+                if (userFromJsonFile.nome != "" && userFromJsonFile.nome != null)
+                {
+                    if (CanvasBarcode.activeSelf)
+                        SetActiveInputPanel(false);
+
+                    ShowUserNameCanvas(userFromJsonFile);
+                    yield return TakeScreenShot(userFromJsonFile);
+                }
+                else
+                {
+                    //O código de barras não retornou nenhum registro...
+                    string msgError = "A consulta não retornou nenhum usuário, Faça a leitura do código novamente.";
+                    yield return ShowError(msgError);
+                }
+            }
+            else
+            {   
+                //Debug.Log("Erro na requisição dos dados da API REST:"+request.error);
+                string msgError = "Valor de entrada inválido, tente novamente!";
+                yield return ShowError(msgError);
+            }
+        }
+
+    }
 
     private IEnumerator GetRequest(string uri)
     {
@@ -196,33 +260,25 @@ public class SceneHandler : MonoBehaviour
                             
             if(currentUser.nome != "" && currentUser.nome != null)
             {   
-                if(CanvasBarcode.activeInHierarchy)
+                if(CanvasBarcode.activeSelf)
                     SetActiveInputPanel(false);
 
                 ShowUserNameCanvas(currentUser);
-
                 yield return TakeScreenShot(currentUser);
             }   
             else
-            {                  
+            {
                 //O código de barras não retornou nenhum registro...
-                Debug.Log("A consulta não retornou nenhum usuário, Tente novamente fazer a leitura...");
-                InputBarcode.text = "";
-                if (!CanvasBarcode.activeInHierarchy)
-                    CanvasBarcode.SetActive(true);
-
-                ActiveBarcodeReader();
+                string msgError = "A consulta não retornou nenhum usuário, Faça a leitura do código novamente.";
+                yield return ShowError(msgError);
             }
 
         }   
         else
-        {   
-            Debug.Log("Erro na requisição dos dados da API REST:"+request.error);
-            InputBarcode.text = "";
-            if (!CanvasBarcode.activeInHierarchy)
-                CanvasBarcode.SetActive(true);
-
-            ActiveBarcodeReader();
+        {      
+            //Debug.Log("Erro na requisição dos dados da API REST:"+request.error);
+            string msgError = "Erro na requisição dos dados da API REST";
+            yield return ShowError(msgError);
         }
     }
                         
@@ -241,51 +297,107 @@ public class SceneHandler : MonoBehaviour
     private IEnumerator TakeScreenShot(Users currentUser)
     {   
         bool printSuccess = true;
+        string errorMsg = "";
 
+        //The File
         printScrFileName = ConfigItems.print_file_name + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
-        string printScrPath = Path.Combine(Application.dataPath, printScrFileName);
+
+        //Creating the folder to save the file
+        string pathToSave = @ConfigItems.print_path + currentUser.email;
+        var directoryInf = @System.IO.Directory.CreateDirectory(pathToSave);
+        string printScrPath = @Path.Combine(pathToSave, printScrFileName);
+
+        while (!directoryInf.Exists)
+        {
+            ResetTimeLeftToIdle();
+            yield return null;
+        }
+
         ScreenCapture.CaptureScreenshot(printScrPath, ConfigItems.print_quality_level);
 
         while (!System.IO.File.Exists(printScrPath))
+        {   
+            ResetTimeLeftToIdle();
             yield return null;
+        }
 
+        /*
         try
         {   
-            string pathToSave = @ConfigItems.print_path + currentUser.email;
-            System.IO.Directory.CreateDirectory(pathToSave);
             File.Move(printScrPath, Path.Combine(pathToSave, printScrFileName));
-
-            Debug.Log("Print Sucesso!");
-        }
-        catch (Exception e)
-        {
+        }   
+        catch(Exception e)
+        {   
             printSuccess = false;
-            Debug.Log("The process failed: {0}" + e.Message);
-        }
+            errorMsg = "The process failed: {0}" + e.Message;            
+        }   
+        */
 
         if(printSuccess)
         {   
+            ResetTimeLeftToIdle();
+            yield return new WaitForSeconds(5f);
+            yield return ShowSuccess();
             yield return ReturnToIdle();
         }   
         else
         {   
+            ShowError(errorMsg);
             Debug.Log("Lets try again...");
         }   
     }
 
     private IEnumerator ShowSuccess()
+    {   
+        if (CanvasFooter.activeSelf)
+            HideUserNameCanvas();
+
+        if (!CanvasSuccess.activeSelf)
+            CanvasSuccess.SetActive(true);
+
+        yield return new WaitForSeconds(4f);
+
+        if (CanvasSuccess.activeSelf)
+            CanvasSuccess.SetActive(false);
+    }
+
+    private IEnumerator ShowError(string errorMsg)
     {
-        yield return null;
+        if(CanvasFooter.activeSelf)
+            HideUserNameCanvas();
+
+        if (CanvasBarcode.activeSelf)
+            CanvasBarcode.SetActive(false);
+
+        //Activate error canvas
+        if (!CanvasError.activeSelf)
+            CanvasError.SetActive(true);
+        TxtError.text = errorMsg;
+
+        //Wait some time to show the error msg...
+        yield return new WaitForSeconds(4f);
+
+        //Deactivate error canvas
+        if (CanvasError.activeSelf)
+            CanvasError.SetActive(false);
+        TxtError.text = "";
+
+        //Activate the barcode canvas in order to get the barcode data again...
+        if (!CanvasBarcode.activeSelf)
+            CanvasBarcode.SetActive(true);
+        InputBarcode.text = "";
+        ActiveBarcodeReader();
     }
 
     private IEnumerator ReturnToIdle()
-    {      
-        yield return new WaitForSeconds(4f);
+    {   
+        yield return new WaitForSeconds(0.1f);
         HideUserNameCanvas();
         SetActiveInputPanel(false);
         isOnInteraction = false;
-        if (CanvasFooter.activeInHierarchy)
+        if (CanvasFooter.activeSelf)
             CanvasFooter.SetActive(false);
+
         LoadTheScene(idleSceneName, interactionSceneName);
         SetActiveIdleCanvas(true);
     } 
@@ -302,7 +414,6 @@ public class SceneHandler : MonoBehaviour
             CanvasTop.SetActive(false);
             CanvasInteractionMsg.SetActive(false);
         }
-
     }
 
     private string FormatPath(string path)
