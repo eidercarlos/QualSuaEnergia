@@ -73,7 +73,7 @@ public class SphereInteraction : MonoBehaviour
                     UpdateParticlesColor();
                 }   
 
-                if(psEmission > 0f)
+                if(psEmission > 0f && psEmission < 250f)
                 {   
                     UpdateParticlesEmission(psEmission);
                 }
@@ -126,7 +126,7 @@ public class SphereInteraction : MonoBehaviour
 
         //Change the all the colors of the Particles 2
         foreach (ParticleSystem effects in ParticlesColorEffects2)
-        {
+        {   
             var mainEffect = effects.main;
 
             if (effects.tag == "FogParticle")
