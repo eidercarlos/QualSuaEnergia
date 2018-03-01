@@ -1,6 +1,6 @@
 {
-	"time_print_after_start_interaction": 8,
-	"time_get_idle": 12,
+	"time_print_after_start_interaction": 120,
+	"time_get_idle": 120,
 	"print_path" : "C:/tmp/postal_social/",
 	"print_file_name": "enel_qualsuaenergia_",
 	"print_quality_level": 3,

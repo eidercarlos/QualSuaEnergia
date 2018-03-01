@@ -5,6 +5,12 @@ using UnityEngine;
 
 public class SphereInteraction : MonoBehaviour
 {
+    private Vector3 lastAngleX;
+    private float totalAngleX;
+    public Color[] ENELColors;
+
+    private Color selectedColor1;
+    private Color selectedColor2;
 
     private bool isParticlesFreezed = false;
     public bool IsParticlesFreezed
@@ -21,60 +27,61 @@ public class SphereInteraction : MonoBehaviour
     }
 
     public ParticleSystem[] AllParticles;
-    public ParticleSystem[] ParticleEffects;
+    public ParticleSystem[] ParticlesColorEffects1;
+    public ParticleSystem[] ParticlesColorEffects2;
     public ParticleSystem[] ParticleEmitters;
 
-    const float TOLERANCE = 0.0001f;
+    SceneHandler sceneHandler;
 
-    public struct HSBColor
+    private void Start()
     {
-        public float H;
-        public float S;
-        public float B;
-        public float A;
-
-        public HSBColor(float h, float s, float b, float a)
-        {
-            this.H = h;
-            this.S = s;
-            this.B = b;
-            this.A = a;
-        }
+        sceneHandler = SceneHandler.Instance;
     }
 
     void Update()
     {            
-        if(SceneHandler.Instance != null && SceneHandler.Instance.IsOnInteraction)
+        if(sceneHandler != null && sceneHandler.IsOnInteraction)
         {   
-            float hRotation = SceneHandler.Instance.ConfigItems.horizontal_speed * Input.GetAxis("Mouse X");
-            float vRotation = SceneHandler.Instance.ConfigItems.vertical_speed * Input.GetAxis("Mouse Y");
-
-            if(SceneHandler.Instance.ConfigItems.invert_axis_x)
+            float hRotation = sceneHandler.ConfigItems.horizontal_speed * Input.GetAxis("Mouse X");
+            float vRotation = sceneHandler.ConfigItems.vertical_speed * Input.GetAxis("Mouse Y");
+            
+            if(sceneHandler.ConfigItems.invert_axis_x)
                 hRotation = hRotation * (-1);
 
-            if (SceneHandler.Instance.ConfigItems.invert_axis_y)
+            if (sceneHandler.ConfigItems.invert_axis_y)
                 vRotation = vRotation * (-1);
 
             transform.Rotate(vRotation, -hRotation, 0, Space.World);
             
             if(transform.hasChanged)
-            {         
-                float colorHUE = transform.eulerAngles.x;
+            {   
                 float psEmission = transform.eulerAngles.y;
+                var XangleOffset = transform.eulerAngles.x - lastAngleX.x;
 
-                if(colorHUE > 0f)
+                //if(XangleOffset > 90f) XangleOffset -= 180f;
+                //if(XangleOffset < -90f) XangleOffset += 180f;
+
+                lastAngleX = transform.eulerAngles;
+
+                totalAngleX += XangleOffset;
+
+                //Debug.Log("Total Angles: "+totalAngleX);
+
+                if(Mathf.Abs(totalAngleX) > 180f)
                 {   
-                    UpdateParticlesCollor(colorHUE / 360f);
-                }
-                
+                    //Debug.Log("Greater than 180");
+                    UpdateParticlesColor();
+                }   
+
                 if(psEmission > 0f)
-                {
+                {   
                     UpdateParticlesEmission(psEmission);
                 }
-            } 
+
+            }
         }
 
-        if(!SceneHandler.Instance.IsOnInteraction && !IsParticlesFreezed)
+        if(!sceneHandler.IsOnInteraction && !IsParticlesFreezed)
         {
             FreezeParticles();
         }
@@ -90,12 +97,49 @@ public class SphereInteraction : MonoBehaviour
         IsParticlesFreezed = true;
     }   
 
-    private void UpdateParticlesCollor(float HUEColor)
+    private void UpdateParticlesColor()
     {   
-        foreach (var effects in ParticleEffects)
+        int rangeColorIndex = UnityEngine.Random.Range(0, ENELColors.Length-1);        
+        selectedColor1 = ENELColors[rangeColorIndex];
+                                
+        do
         {   
-            effects.startColor = ConvertRGBColorByHUE(effects.startColor, HUEColor);
+            rangeColorIndex = UnityEngine.Random.Range(0, ENELColors.Length - 1);
+            selectedColor2 = ENELColors[rangeColorIndex];
+
+        }while(selectedColor1.Equals(selectedColor2));
+
+        //Change the all the colors of the Particles 1
+        foreach (ParticleSystem effects in ParticlesColorEffects1)
+        {
+            var mainEffect = effects.main;
+
+            if(effects.tag == "FogParticle")
+            {
+                mainEffect.startColor = new Color(selectedColor1.r, selectedColor1.g, selectedColor1.b, 0.2f);
+            }
+            else
+            {
+                mainEffect.startColor = selectedColor1;
+            }           
         }
+
+        //Change the all the colors of the Particles 2
+        foreach (ParticleSystem effects in ParticlesColorEffects2)
+        {
+            var mainEffect = effects.main;
+
+            if (effects.tag == "FogParticle")
+            {
+                mainEffect.startColor = new Color(selectedColor2.r, selectedColor2.g, selectedColor2.b, 0.2f);
+            }
+            else
+            {
+                mainEffect.startColor = selectedColor2;
+            }
+        }
+
+        totalAngleX = 0f;
     }  
     
     private void UpdateParticlesEmission(float emission)
@@ -115,115 +159,4 @@ public class SphereInteraction : MonoBehaviour
         return angleIdx;
     }
 
-    public static Color ConvertRGBColorByHUE(Color oldColor, float hue)
-    {   
-        var brightness = ColorToHSV(oldColor).B;
-        if (brightness < TOLERANCE)
-            brightness = TOLERANCE;
-        var hsv = ColorToHSV(oldColor/ brightness);
-        hsv.H = hue;
-        var color = HSVToColor(hsv) * brightness;
-        color.a = oldColor.a;
-        return color;
-    }
-
-    public static HSBColor ColorToHSV(Color color)
-    {   
-        HSBColor ret = new HSBColor(0f, 0f, 0f, color.a);
-
-        float r = color.r;
-        float g = color.g;
-        float b = color.b;
-
-        float max = Mathf.Max(r, Mathf.Max(g, b));
-
-        if (max <= 0)
-            return ret;
-
-        float min = Mathf.Min(r, Mathf.Min(g, b));
-        float dif = max - min;
-
-        if (max > min)
-        {
-            if (Math.Abs(g - max) < TOLERANCE)
-                ret.H = (b - r) / dif * 60f + 120f;
-            else if (Math.Abs(b - max) < TOLERANCE)
-                ret.H = (r - g) / dif * 60f + 240f;
-            else if (b > g)
-                ret.H = (g - b) / dif * 60f + 360f;
-            else
-                ret.H = (g - b) / dif * 60f;
-            if (ret.H < 0)
-                ret.H = ret.H + 360f;
-        }
-        else
-            ret.H = 0;
-
-        ret.H *= 1f / 360f;
-        ret.S = (dif / max) * 1f;
-        ret.B = max;
-
-        return ret;
-    }
-
-    public static Color HSVToColor(HSBColor hsbColor)
-    {   
-        float r = hsbColor.B;
-        float g = hsbColor.B;
-        float b = hsbColor.B;
-        if (Math.Abs(hsbColor.S) > TOLERANCE)
-        {
-            float max = hsbColor.B;
-            float dif = hsbColor.B * hsbColor.S;
-            float min = hsbColor.B - dif;
-
-            float h = hsbColor.H * 360f;
-
-            if (h < 60f)
-            {
-                r = max;
-                g = h * dif / 60f + min;
-                b = min;
-            }
-            else if (h < 120f)
-            {
-                r = -(h - 120f) * dif / 60f + min;
-                g = max;
-                b = min;
-            }
-            else if (h < 180f)
-            {
-                r = min;
-                g = max;
-                b = (h - 120f) * dif / 60f + min;
-            }
-            else if (h < 240f)
-            {
-                r = min;
-                g = -(h - 240f) * dif / 60f + min;
-                b = max;
-            }
-            else if (h < 300f)
-            {
-                r = (h - 240f) * dif / 60f + min;
-                g = min;
-                b = max;
-            }
-            else if (h <= 360f)
-            {
-                r = max;
-                g = min;
-                b = -(h - 360f) * dif / 60 + min;
-            }
-            else
-            {
-                r = 0;
-                g = 0;
-                b = 0;
-            }
-        }
-
-        return new Color(Mathf.Clamp01(r), Mathf.Clamp01(g), Mathf.Clamp01(b), hsbColor.A);
-    }
-
-}   
+}
