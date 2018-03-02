@@ -73,9 +73,13 @@ public class SphereInteraction : MonoBehaviour
                     UpdateParticlesColor();
                 }   
 
-                if(psEmission > 0f && psEmission < 250f)
+                if(psEmission > 0f && psEmission <= 180f)
                 {   
                     UpdateParticlesEmission(psEmission);
+                }
+                else
+                {
+                    UpdateParticlesEmission(psEmission/2);
                 }
 
             }
