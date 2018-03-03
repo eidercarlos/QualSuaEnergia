@@ -26,9 +26,11 @@ public class SceneHandler : MonoBehaviour
     private string interactionSceneName = "Interaction";
     private float timeLeftToGoIdle;
     private float timeOfInteractionStart;
+    private float timeAfterStopMovingMouse;
     private float cursorPosition;
     private bool catchCursor = true;
     private bool isOnInteraction = false;
+    private bool isMovingMouse = false;   
     private string printScrFileName;
     private Users currentUser;
     private Users userFromJsonFile;
@@ -37,18 +39,34 @@ public class SceneHandler : MonoBehaviour
     public Settings ConfigItems { get; set; }
 
     public bool IsOnInteraction
-    {      
+    {         
         get
-        {   
+        {        
             return isOnInteraction;
         }   
-    }   
+    }
+
+    public bool IsMovingMouse
+    {
+        get
+        {   
+            return isMovingMouse;
+        }   
+    }
+
+    public float TimeAfterStopMovingMouse
+    {
+        get
+        {   
+            return TimeAfterStopMovingMouse;
+        }   
+    }
 
     void Awake ()
     {   
         Cursor.visible = false;
         Instance = this;
-                        
+                                
         //Load the configurations from settings.json
         using(StreamReader jsonFile = new StreamReader("settings.json"))
         {            
@@ -65,7 +83,7 @@ public class SceneHandler : MonoBehaviour
                 SetActiveIdleCanvas(true);
             }
         }   
-    }   
+    }
 
     void Update()
     {   
@@ -89,9 +107,11 @@ public class SceneHandler : MonoBehaviour
 
         //Preparing to active the idle scene
         if(cursorPosition == Input.GetAxis("Mouse X"))
-        {   
+        {
+            isMovingMouse = false;
+            timeAfterStopMovingMouse += Time.deltaTime;
             timeLeftToGoIdle -= Time.deltaTime;
-            if(timeLeftToGoIdle < 0)
+            if (timeLeftToGoIdle < 0)
             {   
                 timeLeftToGoIdle = ConfigItems.time_get_idle;
                 Cursor.visible = false;
@@ -105,9 +125,11 @@ public class SceneHandler : MonoBehaviour
                     isOnInteraction = false;
                 }   
             }   
-        }   
-        else //In case of the user is interacting with something....
-        {   
+        }       
+        else//In case of the user is moving the mouse....
+        {            
+            isMovingMouse = true;
+            timeAfterStopMovingMouse = 0f;
             timeLeftToGoIdle = ConfigItems.time_get_idle;
 
             if(!SceneManager.GetSceneByName(interactionSceneName).isLoaded)
