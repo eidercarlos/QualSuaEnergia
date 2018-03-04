@@ -64,23 +64,26 @@ public class SphereInteraction : MonoBehaviour
 
     #endregion
 
-    SceneHandler sceneHandler;
-    Animation anim;
+    private bool isEnergyBigger = false;
 
-    private void Start()
-    {   
+    SceneHandler sceneHandler;
+    Animator anim;
+
+    private void Awake()
+    {         
         sceneHandler = SceneHandler.Instance;
-                    
-        /*
+        anim = GetComponent<Animator>();
+
         //Main size
         mainOrbSize_Start = transform.localScale;
         mainOrbSize_End = new Vector3(3f, 3f, 3f);
 
         //ElectricBean Particles
         mainElectricBeanParticle = ElectricBeanParticles.main;
+        var electricBeanStartSize = mainElectricBeanParticle.startSize;
         electricBeanMinSize_Start = mainElectricBeanParticle.startSize.constantMin;
         electricBeanMaxSize_Start = mainElectricBeanParticle.startSize.constantMax;
-        
+                        
         electricBeanMinSize_End = 5f;
         electricBeanMaxSize_End = 9f;
 
@@ -101,17 +104,23 @@ public class SphereInteraction : MonoBehaviour
         RayMaxLifetime_End = 5f;
         RayMinSize_End = 0.1f;
         RayMaxSize_End = 0.5f;
-        */
     }
 
     void Update()
     {            
         if(sceneHandler != null && sceneHandler.IsOnInteraction)
-        { 
-            
-            if(sceneHandler.IsMovingMouse)
+        {
+
+            if(sceneHandler.IsMovingMouse && !isEnergyBigger)
             {
-                StartCoroutine(GrowEnergy());
+                anim.SetTrigger("GrowEnergy");
+                isEnergyBigger = true;
+            }
+
+            if(!sceneHandler.IsMovingMouse && isEnergyBigger && sceneHandler.TimeAfterStopMovingMouse >= 4f)
+            {
+                anim.SetTrigger("ShrinkEnergy");
+                isEnergyBigger = false;
             }
 
             float hRotation = sceneHandler.ConfigItems.horizontal_speed * Input.GetAxis("Mouse X");
@@ -150,9 +159,9 @@ public class SphereInteraction : MonoBehaviour
                     UpdateParticlesEmission(psEmission);
                 }
                 else
-                {
+                {   
                     UpdateParticlesEmission(psEmission/2);
-                }
+                }   
 
             }
         }
@@ -267,7 +276,7 @@ public class SphereInteraction : MonoBehaviour
         float lerpPercentage = 0.0f; //Starts in 0.0f (0%) and Ends in 1.0f (100%)
 
         while (lerpPercentage <= 1f)
-        {
+        {         
             currentLerpTime += Time.deltaTime;
             lerpPercentage = (currentLerpTime * 100 / timeInSeconds) / 100;
 
@@ -275,36 +284,65 @@ public class SphereInteraction : MonoBehaviour
             transform.localScale = Vector3.Lerp(mainOrbSize_Start, mainOrbSize_End, lerpPercentage);
 
             //Lerp the ElectricBean vars
-            //var mainElectricBean = ElectricBeanParticles.main;
-            //mainElectricBean.startSize.constantMin = 10f;
+            var electricBeanStartSize = mainElectricBeanParticle.startSize;
+            electricBeanStartSize.constantMin = Mathf.Lerp(electricBeanMinSize_Start, electricBeanMinSize_End, lerpPercentage);
+            electricBeanStartSize.constantMax = Mathf.Lerp(electricBeanMaxSize_Start, electricBeanMaxSize_End, lerpPercentage);
 
-            //ElectricBeanParticles.startSize = 10f;
-            //ElectricBeanParticles.main.startSize.constantMin = Mathf.Lerp(electricBeanMinSize_Start, electricBeanMinSize_End, lerpPercentage);
-            //mainElectricBeanParticle.startSize.constantMin = Mathf.Lerp(electricBeanMinSize_Start, electricBeanMinSize_End, lerpPercentage);
-            //mainElectricBeanParticle.startSize.constantMax = Mathf.Lerp(electricBeanMaxSize_Start, electricBeanMaxSize_End, lerpPercentage);
+            //Lerp the Circle vars
+            mainCircleParticle.startSize = Mathf.Lerp(circleSize_Start, circleSize_End, lerpPercentage);
+
+            //Lerp the RayParticle Lifetime and Size
+            var rayParticleStartLifeTime = mainRayParticle.startLifetime;
+            rayParticleStartLifeTime.constantMin = Mathf.Lerp(RayMinLifetime_Start, RayMinLifetime_End, lerpPercentage);
+            rayParticleStartLifeTime.constantMax = Mathf.Lerp(RayMaxLifetime_Start, RayMaxLifetime_End, lerpPercentage);
+
+            var rayParticleStartSize = mainRayParticle.startSize;
+            rayParticleStartSize.constantMin = Mathf.Lerp(RayMinSize_Start, RayMinSize_End, lerpPercentage);
+            rayParticleStartSize.constantMax = Mathf.Lerp(RayMaxSize_Start, RayMaxSize_End, lerpPercentage);
 
             yield return null;
         }
 
+        isEnergyBigger = true;
     }
 
-    /*
-    private IEnumerator FallOverTheGround(GameObject animal, Vector3 endPosition)
+    private IEnumerator ShrinkEnergy()
     {   
         float currentLerpTime = 0.0f; //The current time measured during the LERP
-        float timeInSeconds = 1.5f; //The cost of time to do the LERP
+        float timeInSeconds = 5f; //The cost of time to do the LERP
         float lerpPercentage = 0.0f; //Starts in 0.0f (0%) and Ends in 1.0f (100%)
-        Vector3 startPosition = animal.transform.position;
 
         while (lerpPercentage <= 1f)
         {
             currentLerpTime += Time.deltaTime;
             lerpPercentage = (currentLerpTime * 100 / timeInSeconds) / 100;
-            animal.transform.position = Vector3.Lerp(startPosition, endPosition, lerpPercentage);
+
+            //Lerp the Main Scale
+            transform.localScale = Vector3.Lerp(mainOrbSize_End, mainOrbSize_Start, lerpPercentage);
+
+            //Lerp the ElectricBean vars
+            var electricBeanStartSize = mainElectricBeanParticle.startSize;
+            electricBeanStartSize.constantMin = Mathf.Lerp(electricBeanMinSize_End, electricBeanMinSize_Start, lerpPercentage);
+            electricBeanStartSize.constantMax = Mathf.Lerp(electricBeanMaxSize_End, electricBeanMaxSize_Start, lerpPercentage);
+
+            //Lerp the Circle vars
+            mainCircleParticle.startSize = Mathf.Lerp(circleSize_End, circleSize_Start, lerpPercentage);
+
+            //Lerp the RayParticle Lifetime and Size
+            var rayParticleStartLifeTime = mainRayParticle.startLifetime;
+            rayParticleStartLifeTime.constantMin = Mathf.Lerp(RayMinLifetime_End, RayMinLifetime_Start, lerpPercentage);
+            rayParticleStartLifeTime.constantMax = Mathf.Lerp(RayMaxLifetime_End, RayMaxLifetime_Start, lerpPercentage);
+
+            var rayParticleStartSize = mainRayParticle.startSize;
+            rayParticleStartSize.constantMin = Mathf.Lerp(RayMinSize_End, RayMinSize_Start, lerpPercentage);
+            rayParticleStartSize.constantMax = Mathf.Lerp(RayMaxSize_End, RayMaxSize_Start, lerpPercentage);
 
             yield return null;
         }
+
+        isEnergyBigger = false;
     }
-    */
+
+
 
 }

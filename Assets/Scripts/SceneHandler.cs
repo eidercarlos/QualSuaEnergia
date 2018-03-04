@@ -58,7 +58,7 @@ public class SceneHandler : MonoBehaviour
     {
         get
         {   
-            return TimeAfterStopMovingMouse;
+            return timeAfterStopMovingMouse;
         }   
     }
 
@@ -107,7 +107,7 @@ public class SceneHandler : MonoBehaviour
 
         //Preparing to active the idle scene
         if(cursorPosition == Input.GetAxis("Mouse X"))
-        {
+        {   
             isMovingMouse = false;
             timeAfterStopMovingMouse += Time.deltaTime;
             timeLeftToGoIdle -= Time.deltaTime;

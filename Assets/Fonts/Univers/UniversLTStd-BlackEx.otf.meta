@@ -1,0 +1,24 @@
+fileFormatVersion: 2
+guid: 267267f4815809f4a983e1c5928cd791
+timeCreated: 1520172294
+licenseType: Free
+TrueTypeFontImporter:
+  externalObjects: {}
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontName: Univers LT Std
+  fontNames:
+  - Univers LT Std
+  fallbackFontReferences:
+  - {fileID: 12800000, guid: 0237ec9202cb3e34f965a79332933f5f, type: 3}
+  customCharacters: 
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  useLegacyBoundsCalculation: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

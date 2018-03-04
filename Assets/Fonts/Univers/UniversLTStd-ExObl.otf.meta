@@ -1,0 +1,36 @@
+fileFormatVersion: 2
+guid: 7facc1564bdc9e448aadb133694658a0
+timeCreated: 1520172296
+licenseType: Free
+TrueTypeFontImporter:
+  externalObjects: {}
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontName: Univers LT Std
+  fontNames:
+  - Univers LT Std
+  fallbackFontReferences:
+  - {fileID: 12800000, guid: 5ed4d2a0ba2e20c4ebfbe3a5136734d5, type: 3}
+  - {fileID: 12800000, guid: 0237ec9202cb3e34f965a79332933f5f, type: 3}
+  - {fileID: 12800000, guid: 5be7a444b5c79b34288db6032336d189, type: 3}
+  - {fileID: 12800000, guid: 6e2c6b9450127ca449bf7e4a6393630e, type: 3}
+  - {fileID: 12800000, guid: 267267f4815809f4a983e1c5928cd791, type: 3}
+  - {fileID: 12800000, guid: 5a795faa44e23a84c88f992d452062e3, type: 3}
+  - {fileID: 12800000, guid: 665da7ca5e4d9064c8e981f3f595cf38, type: 3}
+  - {fileID: 12800000, guid: 60f78a0b812d9da418119f09efd2fd8c, type: 3}
+  - {fileID: 12800000, guid: 77c2288bc0f780e45ad10cd630c38c38, type: 3}
+  - {fileID: 12800000, guid: 4523f81c4c89bf54b977d99a5f79f276, type: 3}
+  - {fileID: 12800000, guid: 666887ec13f00184381c03cf4a7a21ba, type: 3}
+  - {fileID: 12800000, guid: 4d33c4fcdf5044e4ab3c4e2df05bff2d, type: 3}
+  - {fileID: 12800000, guid: 6d78df9da3f2ab743aee86a73fe8525b, type: 3}
+  customCharacters: 
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  useLegacyBoundsCalculation: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
