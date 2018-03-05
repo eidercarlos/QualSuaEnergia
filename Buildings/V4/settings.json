@@ -1,0 +1,17 @@
+{
+	"time_print_after_start_interaction": 60,
+	"time_get_idle": 300,
+	"print_path" : "C:/tmp/postal_social/",
+	"print_file_name": "enel_qualsuaenergia_",
+	"print_quality_level": 2,
+	"rest_api_url" : "http://localhost/enel/leads/barcode/",
+	"invert_axis_x": false,
+	"invert_axis_y": false,
+	"horizontal_speed": 2,
+	"vertical_speed": 2,
+	"exchange_axis": false,
+	"orb_x_position": 0,
+	"orb_y_position": 4,
+	"orb_z_position": 0,
+	"input_separator": ";;"
+}

@@ -11,17 +11,20 @@ using UnityEngine.Networking;
 using System;
 
 public class SceneHandler : MonoBehaviour
-{   
-    public GameObject CanvasBarcode;
-    public GameObject CanvasLogo;
-    public GameObject CanvasTop;
-    public GameObject CanvasFooter;
-    public GameObject CanvasInteractionMsg;
-    public GameObject CanvasSuccess;
-    public GameObject CanvasError;
+{
+    public GameObject CanvasIdle;
+    public GameObject CanvasInteraction;
+    public GameObject BarcodePanel;
+    public GameObject UsernamePanel;
+    public GameObject LoadingPanel;
+    public GameObject SuccessPanel;
+    public GameObject ErrorPanel;
+    public GameObject TimerPanel;
     public InputField InputBarcode;
     public Text TxtUsername;
     public Text TxtError;
+    public Text TxtTimer;
+
     private string idleSceneName = "Idle";
     private string interactionSceneName = "Interaction";
     private float timeLeftToGoIdle;
@@ -62,27 +65,40 @@ public class SceneHandler : MonoBehaviour
         }   
     }
 
-    void Awake ()
+    public float TimeOfInteractionStart
     {   
+        get
+        {
+            return timeOfInteractionStart;
+        }
+    }
+
+    void Awake()
+    {         
         Cursor.visible = false;
         Instance = this;
-                                
-        //Load the configurations from settings.json
-        using(StreamReader jsonFile = new StreamReader("settings.json"))
-        {            
-            string jsonFileContent = jsonFile.ReadToEnd();
-            ConfigItems = JsonConvert.DeserializeObject<Settings>(jsonFileContent);            
-        }   
-        
+                                        
         //Check if the Idle scene is already loaded
         if(!SceneManager.GetSceneByName(idleSceneName).isLoaded)
         {   
             SceneManager.LoadScene(idleSceneName, LoadSceneMode.Additive);
-            if(!CanvasInteractionMsg.activeSelf || !CanvasTop.activeSelf)
-            {   
-                SetActiveIdleCanvas(true);
-            }
-        }   
+            if(!CanvasIdle.activeSelf)
+                CanvasIdle.SetActive(true);
+        }
+
+        //Ensure the CanvasInteraction is Hide
+        if (CanvasInteraction.activeSelf)
+            CanvasInteraction.SetActive(false);
+    }
+
+    void Start()
+    {
+        //Load the configurations from settings.json
+        using (StreamReader jsonFile = new StreamReader("settings.json"))
+        {
+            string jsonFileContent = jsonFile.ReadToEnd();
+            ConfigItems = JsonConvert.DeserializeObject<Settings>(jsonFileContent);
+        }
     }
 
     void Update()
@@ -91,12 +107,15 @@ public class SceneHandler : MonoBehaviour
         
         //Its time to take the screen shot
         if( (isOnInteraction) && ((Time.time - timeOfInteractionStart) > ConfigItems.time_print_after_start_interaction) )
-        {      
-            PauseScene();            
-            ActiveBarcodeReader();
-        }   
+        {                     
+            PauseScene();
+            PanelManagerActive("barcode");
+        }         
     }      
 
+    /// <summary>
+    /// The function responsible to handle all behaviors which depends on time
+    /// </summary>
     private void TimerHandler()
     {   
         if(catchCursor)
@@ -111,17 +130,23 @@ public class SceneHandler : MonoBehaviour
             isMovingMouse = false;
             timeAfterStopMovingMouse += Time.deltaTime;
             timeLeftToGoIdle -= Time.deltaTime;
-            if (timeLeftToGoIdle < 0)
+            if(timeLeftToGoIdle < 0)
             {   
                 timeLeftToGoIdle = ConfigItems.time_get_idle;
-                Cursor.visible = false;
                 catchCursor = true;
 
                 if(!SceneManager.GetSceneByName(idleSceneName).isLoaded)
-                {      
-                    SetActiveInputPanel(false);
+                {   
+                    PanelManagerActive("hide");
+
+                    if(CanvasInteraction.activeSelf)
+                        CanvasInteraction.SetActive(false);
+
                     LoadTheScene(idleSceneName, interactionSceneName);
-                    SetActiveIdleCanvas(true);
+
+                    if(!CanvasIdle.activeSelf)
+                        CanvasIdle.SetActive(true);
+
                     isOnInteraction = false;
                 }   
             }   
@@ -133,13 +158,36 @@ public class SceneHandler : MonoBehaviour
             timeLeftToGoIdle = ConfigItems.time_get_idle;
 
             if(!SceneManager.GetSceneByName(interactionSceneName).isLoaded)
-            {   
+            {
+                if (CanvasIdle.activeSelf)
+                    CanvasIdle.SetActive(false);
+
                 LoadTheScene(interactionSceneName, idleSceneName);
-                SetActiveIdleCanvas(false);
+
+                if (!CanvasInteraction.activeSelf)
+                    CanvasInteraction.SetActive(true);
+
+                PanelManagerActive("hide");
+
                 timeOfInteractionStart = Time.time;
                 isOnInteraction = true;
+
+                PanelManagerActive("timer");
             }
-        }   
+        }
+
+        if(IsOnInteraction)
+        {
+            UpdateTimeLeftIdle();
+        }
+    }
+
+    private void UpdateTimeLeftIdle()
+    {
+        float timeLeftToPrint = ConfigItems.time_print_after_start_interaction - (Time.time - TimeOfInteractionStart);
+        string minutes = ((int)timeLeftToPrint / 60).ToString();
+        string seconds = (timeLeftToPrint % 60).ToString("f1");
+        TxtTimer.text = minutes + ":" + seconds;
     }
 
     private void LoadTheScene(string sceneToLoadName, string sceneToUnloadName)
@@ -147,108 +195,86 @@ public class SceneHandler : MonoBehaviour
         Scene sceneToUnload = SceneManager.GetSceneByName(sceneToUnloadName);
         SceneManager.UnloadScene(sceneToUnload);
         SceneManager.LoadScene(sceneToLoadName, LoadSceneMode.Additive);
-
-        //var unloadOperation = @SceneManager.UnloadSceneAsync(sceneToUnload);
-        //unloadOperation.allowSceneActivation = false;
-        //while (!unloadOperation.isDone)
-        //{
-        //    yield return null;
-
-        //}
-        
-        /*
-        var loadOperation = SceneManager.LoadSceneAsync(sceneToLoadName, LoadSceneMode.Additive);
-        while (!loadOperation.isDone)
-        {
-            yield return null;
-            //if (!loadOperation.isDone)
-            //    SceneManager.LoadScene(sceneToLoadName, LoadSceneMode.Additive);
-        }
-        */
     }   
 
-    private void ActiveBarcodeReader()
-    {   
-        //Adds a listener to the input field and invokes a method when the value changes.
-        if(InputBarcode != null)
-        {   
-            InputBarcode.onValueChanged.AddListener(delegate { InputBarcodeEndEdit(); });
-        }   
-        else
-        {   
-            Debug.Log("Objeto Input não encontrado ou associado...");
-        }   
-
-        if(CanvasBarcode != null)
-        {
-            SetActiveInputPanel(true);
-        }
-    }
-
-    private void SetActiveInputPanel(bool isActive)
-    {   
-        if(isActive)
-        {   
-            CanvasBarcode.SetActive(true);
-            InputBarcode.Select();
-            InputBarcode.ActivateInputField();
-        }   
-        else
-        {   
-            InputBarcode.text = "";
-            CanvasBarcode.SetActive(false);
-        }   
-    }   
-    
-    //Invoked when the value of the text field changes.
-    //Wait some time after the last change (char) and call a function to submit the value...
+    /// <summary>
+    /// An event which is invoked when changing the barcode text field input
+    /// </summary>
     private void InputBarcodeEndEdit()
-    {   
+    {      
         if(InputBarcode.text.Length > 0)
         {   
-            //Debug.Log("Changing the barcode...");
-
-            //Increasing the time left to get idle to prevent from get idle...
             ResetTimeLeftToIdle();
             //Remove all listener so it can't be called another time...
             InputBarcode.onValueChanged.RemoveAllListeners();
             StartCoroutine(ProcessBarcodeInput());
         }   
     }
-    
+
+    /// <summary>
+    /// Function responsible to increase the time left to get in order to prevent from get idle...
+    /// </summary>
     private void ResetTimeLeftToIdle()
     {
         timeLeftToGoIdle = ConfigItems.time_get_idle;
     }
 
+    /// <summary>
+    /// Function responsible to wait some time after the last change on the barcode input and call a function to submit the value...
+    /// </summary>
+    /// <returns>The return calls a function responsible to read and process the barcode input</returns>
     private IEnumerator ProcessBarcodeInput()
-    {         
+    {      
         yield return new WaitForSeconds(1.3f);
-        //yield return GetRequest(ConfigItems.rest_api_url+InputBarcode.text);      
-        yield return ReadJsonUserData(InputBarcode.text);
+        
+        string userInputQrCode = InputBarcode.text;
+        string[] userInputSeparated = userInputQrCode.Split(new[] {ConfigItems.input_separator}, StringSplitOptions.None);
+        
+        //Input Data Validation
+        if(userInputSeparated.Length == 2)
+        {         
+            char lastUrlChar = ConfigItems.rest_api_url[ConfigItems.rest_api_url.Length - 1];
+            if (lastUrlChar != '/')
+            {
+                ConfigItems.rest_api_url += '/';
+            }
+            
+            string apiParamsID = userInputSeparated[0];
+            string apiParamsEmail = userInputSeparated[1];
+            string urlParams = ConfigItems.rest_api_url + apiParamsID + '/' + apiParamsEmail;
+
+            //Debug.Log("URL: " + urlParams);
+
+            yield return GetRequest(urlParams);
+            //yield return ReadJsonUserData(InputBarcode.text);
+        }
+        else
+        {   
+            string errorMsg = "Formato de entrada de dados incorreto, Faça a leitura novamente";
+            yield return ShowError(errorMsg);
+        }
     }
-    
+
     private IEnumerator ReadJsonUserData(string barcodeText)
-    {
+    {      
         if(barcodeText != "" && barcodeText != null)
-        {
+        {   
             int userId;
             if (int.TryParse(barcodeText, out userId))
             {
                 //Load the configurations from settings.json
-                using (StreamReader jsonFile = new StreamReader("contatos.json"))
-                {
+                Lead userData;
+                using (StreamReader jsonFile = new StreamReader("leads.json"))
+                {   
                     string jsonFileContent = jsonFile.ReadToEnd();
                     userFromJsonFile = JsonConvert.DeserializeObject<Users>(jsonFileContent);
-                }
+                    userData = userFromJsonFile.lead[0];
+                }   
 
-                if (userFromJsonFile.nome != "" && userFromJsonFile.nome != null)
-                {
-                    if (CanvasBarcode.activeSelf)
-                        SetActiveInputPanel(false);
-
-                    ShowUserNameCanvas(userFromJsonFile);
-                    yield return TakeScreenShot(userFromJsonFile);
+                if (userData.name != "" && userData.name != null)
+                {   
+                    ShowUserNameCanvas(userData);
+                    yield return TakeScreenShot(userData);
                 }
                 else
                 {
@@ -264,7 +290,11 @@ public class SceneHandler : MonoBehaviour
                 yield return ShowError(msgError);
             }
         }
-
+        else
+        {
+            string msgError = "Valor de entrada vazio, tente novamente!";
+            yield return ShowError(msgError);
+        }
     }
 
     private IEnumerator GetRequest(string uri)
@@ -276,26 +306,23 @@ public class SceneHandler : MonoBehaviour
             yield return null;
 
         if(!request.isHttpError && !request.isNetworkError)
-        {      
+        {         
             string jsonResult = request.downloadHandler.text;
             Users currentUser = JsonConvert.DeserializeObject<Users>(jsonResult);
-                            
-            if(currentUser.nome != "" && currentUser.nome != null)
-            {   
-                if(CanvasBarcode.activeSelf)
-                    SetActiveInputPanel(false);
+            Lead lead = currentUser.lead[0];
 
-                ShowUserNameCanvas(currentUser);
-                yield return TakeScreenShot(currentUser);
+            if(lead.name != "" && lead.email != null)
+            {   
+                ShowUserNameCanvas(lead);
+                yield return TakeScreenShot(lead);
             }   
             else
-            {
+            {             
                 //O código de barras não retornou nenhum registro...
                 string msgError = "A consulta não retornou nenhum usuário, Faça a leitura do código novamente.";
                 yield return ShowError(msgError);
-            }
-
-        }   
+            }   
+        }      
         else
         {      
             //Debug.Log("Erro na requisição dos dados da API REST:"+request.error);
@@ -304,23 +331,17 @@ public class SceneHandler : MonoBehaviour
         }
     }
                         
-    private void ShowUserNameCanvas(Users user)
-    {   
-        CanvasFooter.SetActive(true);
-        TxtUsername.text = user.nome.ToUpper();
-    }
-    
-    private void HideUserNameCanvas()
+    private void ShowUserNameCanvas(Lead user)
     {
-        CanvasFooter.SetActive(false);
-        TxtUsername.text = "";
+        PanelManagerActive("username");
+        TxtUsername.text = user.name;
     }
-
-    private IEnumerator TakeScreenShot(Users currentUser)
-    {   
+        
+    private IEnumerator TakeScreenShot(Lead currentUser)
+    {
         bool printSuccess = true;
         string errorMsg = "";
-
+        
         //The File
         printScrFileName = ConfigItems.print_file_name + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
 
@@ -329,7 +350,7 @@ public class SceneHandler : MonoBehaviour
         var directoryInf = @System.IO.Directory.CreateDirectory(pathToSave);
         string printScrPath = @Path.Combine(pathToSave, printScrFileName);
 
-        while (!directoryInf.Exists)
+        while(!directoryInf.Exists)
         {
             ResetTimeLeftToIdle();
             yield return null;
@@ -337,121 +358,219 @@ public class SceneHandler : MonoBehaviour
 
         ScreenCapture.CaptureScreenshot(printScrPath, ConfigItems.print_quality_level);
 
+        yield return new WaitForSeconds(4f);
+
+        PanelManagerActive("loading");
+
         while (!System.IO.File.Exists(printScrPath))
         {   
             ResetTimeLeftToIdle();
             yield return null;
         }
 
-        /*
-        try
-        {   
-            File.Move(printScrPath, Path.Combine(pathToSave, printScrFileName));
-        }   
-        catch(Exception e)
-        {   
-            printSuccess = false;
-            errorMsg = "The process failed: {0}" + e.Message;            
-        }   
-        */
+        yield return new WaitForSeconds(2f);
 
         if(printSuccess)
         {   
             ResetTimeLeftToIdle();
-            yield return new WaitForSeconds(5f);
             yield return ShowSuccess();
             yield return ReturnToIdle();
         }   
         else
         {   
             ShowError(errorMsg);
-            Debug.Log("Lets try again...");
         }   
     }
 
     private IEnumerator ShowSuccess()
-    {   
-        if (CanvasFooter.activeSelf)
-            HideUserNameCanvas();
-
-        if (!CanvasSuccess.activeSelf)
-            CanvasSuccess.SetActive(true);
-
-        yield return new WaitForSeconds(4f);
-
-        if (CanvasSuccess.activeSelf)
-            CanvasSuccess.SetActive(false);
+    {
+        PanelManagerActive("success");
+        yield return new WaitForSeconds(3f);
     }
 
     private IEnumerator ShowError(string errorMsg)
-    {
-        if(CanvasFooter.activeSelf)
-            HideUserNameCanvas();
+    {      
+        if(!CanvasInteraction.activeSelf)
+            CanvasInteraction.SetActive(true);
 
-        if (CanvasBarcode.activeSelf)
-            CanvasBarcode.SetActive(false);
+        PanelManagerActive("error");
 
-        //Activate error canvas
-        if (!CanvasError.activeSelf)
-            CanvasError.SetActive(true);
         TxtError.text = errorMsg;
 
         //Wait some time to show the error msg...
         yield return new WaitForSeconds(4f);
 
-        //Deactivate error canvas
-        if (CanvasError.activeSelf)
-            CanvasError.SetActive(false);
-        TxtError.text = "";
-
         //Activate the barcode canvas in order to get the barcode data again...
-        if (!CanvasBarcode.activeSelf)
-            CanvasBarcode.SetActive(true);
-        InputBarcode.text = "";
-        ActiveBarcodeReader();
+        PanelManagerActive("barcode");
     }
 
     private IEnumerator ReturnToIdle()
-    {   
+    {            
         yield return new WaitForSeconds(0.1f);
-        HideUserNameCanvas();
-        SetActiveInputPanel(false);
         isOnInteraction = false;
-        if (CanvasFooter.activeSelf)
-            CanvasFooter.SetActive(false);
-
+        CanvasInteraction.SetActive(false);
         LoadTheScene(idleSceneName, interactionSceneName);
-        SetActiveIdleCanvas(true);
+        CanvasIdle.SetActive(true);
     } 
     
-    private void SetActiveIdleCanvas(bool key)
-    {
-        if(key)
-        {
-            CanvasTop.SetActive(true);
-            CanvasInteractionMsg.SetActive(true);
-        }
-        else
-        {
-            CanvasTop.SetActive(false);
-            CanvasInteractionMsg.SetActive(false);
-        }
-    }
-
-    private string FormatPath(string path)
-    {
-        string newPath = path.Replace("/", "\\");
-
-        return newPath;
-    }
-
     private void PauseScene()
     {
         isOnInteraction = false;
     }   
 
-    private void ContinueScene()
+    private void PanelManagerActive(string panelName)
     {
-        isOnInteraction = true;
+        switch(panelName)
+        {   
+            case "barcode":
+
+                if (UsernamePanel.activeSelf)
+                    UsernamePanel.SetActive(false);
+                
+                if (LoadingPanel.activeSelf)
+                    LoadingPanel.SetActive(false);
+
+                if (ErrorPanel.activeSelf)
+                    ErrorPanel.SetActive(false);
+
+                if (SuccessPanel.activeSelf)
+                    SuccessPanel.SetActive(false);
+
+                if (TimerPanel.activeSelf)
+                    TimerPanel.SetActive(false);
+
+                if (!BarcodePanel.activeSelf)
+                    BarcodePanel.SetActive(true);
+
+                InputBarcode.text = "";
+                InputBarcode.Select();
+                InputBarcode.ActivateInputField();
+
+                //Adds a listener to the input field which invokes a method when the value changes.
+                InputBarcode.onValueChanged.AddListener(delegate { InputBarcodeEndEdit(); });
+
+                break;
+
+            case "username":
+
+                if (LoadingPanel.activeSelf)
+                    LoadingPanel.SetActive(false);
+
+                if (ErrorPanel.activeSelf)
+                    ErrorPanel.SetActive(false);
+
+                if (SuccessPanel.activeSelf)
+                    SuccessPanel.SetActive(false);
+
+                if (BarcodePanel.activeSelf)
+                    BarcodePanel.SetActive(false);
+
+                if (TimerPanel.activeSelf)
+                    TimerPanel.SetActive(false);
+
+                if (!UsernamePanel.activeSelf)
+                    UsernamePanel.SetActive(true);
+
+                TxtUsername.text = "";
+
+                break;
+
+            case "loading":
+
+                if (ErrorPanel.activeSelf)
+                    ErrorPanel.SetActive(false);
+
+                if (BarcodePanel.activeSelf)
+                    BarcodePanel.SetActive(false);
+
+                if (UsernamePanel.activeSelf)
+                    UsernamePanel.SetActive(false);
+
+                if (SuccessPanel.activeSelf)
+                    SuccessPanel.SetActive(false);
+
+                if (TimerPanel.activeSelf)
+                    TimerPanel.SetActive(false);
+
+                if (!LoadingPanel.activeSelf)
+                    LoadingPanel.SetActive(true);
+
+                break;
+
+            case "success":
+
+                if (ErrorPanel.activeSelf)
+                    ErrorPanel.SetActive(false);
+
+                if (BarcodePanel.activeSelf)
+                    BarcodePanel.SetActive(false);
+
+                if (UsernamePanel.activeSelf)
+                    UsernamePanel.SetActive(false);
+
+                if (LoadingPanel.activeSelf)
+                    LoadingPanel.SetActive(false);
+
+                if (TimerPanel.activeSelf)
+                    TimerPanel.SetActive(false);
+
+                if (!SuccessPanel.activeSelf)
+                    SuccessPanel.SetActive(true);
+
+                break;
+
+            case "error":
+
+                if (BarcodePanel.activeSelf)
+                    BarcodePanel.SetActive(false);
+
+                if (UsernamePanel.activeSelf)
+                    UsernamePanel.SetActive(false);
+
+                if (LoadingPanel.activeSelf)
+                    LoadingPanel.SetActive(false);
+
+                if (SuccessPanel.activeSelf)
+                    SuccessPanel.SetActive(false);
+
+                if (TimerPanel.activeSelf)
+                    TimerPanel.SetActive(false);
+
+                if (!ErrorPanel.activeSelf)
+                    ErrorPanel.SetActive(true);
+
+                TxtError.text = "";
+
+                break;
+
+            case "timer":
+
+                if (!TimerPanel.activeSelf)
+                    TimerPanel.SetActive(true);
+
+                break;
+
+            case "hide":
+
+                if (UsernamePanel.activeSelf)
+                    UsernamePanel.SetActive(false);
+
+                if (LoadingPanel.activeSelf)
+                    LoadingPanel.SetActive(false);
+
+                if (ErrorPanel.activeSelf)
+                    ErrorPanel.SetActive(false);
+
+                if (SuccessPanel.activeSelf)
+                    SuccessPanel.SetActive(false);
+
+                if (TimerPanel.activeSelf)
+                    TimerPanel.SetActive(false);
+
+                if (BarcodePanel.activeSelf)
+                    BarcodePanel.SetActive(false);
+
+                break;
+        }   
     }
 }

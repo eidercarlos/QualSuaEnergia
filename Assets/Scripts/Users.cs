@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class Users
-{   
-    public int id;
-    public string nome;
-    public string email;
-}
+{      
+    public Dictionary<string, string> status = new Dictionary<string, string>();
+    public List<Lead> lead = new List<Lead>();
+}      

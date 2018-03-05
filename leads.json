@@ -1,0 +1,21 @@
+{
+  "status": {
+    "success": "true",
+    "msg": "Registro encontrado."
+  },
+  "lead": [
+    {
+      "id": 4,
+      "name": "Dane Marsh",
+      "surname": "Foster",
+      "email": "tatuzopek@gmail.com",
+      "phone1": "+729-73-1753693",
+      "rg": "Iusto soluta numquam maxime omnis dolorem commodo sunt explicabo Vero impedit nesciunt dolore est accusamus accusantium laborum Eveniet sequi",
+      "company": "Barker and Winters LLC",
+      "jobposition": "Aut ut libero quasi ut molestiae dolorem nobis dolore labore veritatis",
+      "qrcodeimage": null,
+      "created": "2018-02-09T13:40:27-02:00",
+      "modified": "2018-02-09T13:40:27-02:00"
+    }
+  ]
+}
