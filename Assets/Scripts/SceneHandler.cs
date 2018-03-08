@@ -14,12 +14,13 @@ public class SceneHandler : MonoBehaviour
 {
     public GameObject CanvasIdle;
     public GameObject CanvasInteraction;
+    public GameObject TimerPanel;
+    public GameObject YourEnergyPanel;
     public GameObject BarcodePanel;
     public GameObject UsernamePanel;
     public GameObject LoadingPanel;
     public GameObject SuccessPanel;
     public GameObject ErrorPanel;
-    public GameObject TimerPanel;
     public InputField InputBarcode;
     public Text TxtUsername;
     public Text TxtError;
@@ -80,7 +81,7 @@ public class SceneHandler : MonoBehaviour
                                         
         //Check if the Idle scene is already loaded
         if(!SceneManager.GetSceneByName(idleSceneName).isLoaded)
-        {   
+        {      
             SceneManager.LoadScene(idleSceneName, LoadSceneMode.Additive);
             if(!CanvasIdle.activeSelf)
                 CanvasIdle.SetActive(true);
@@ -107,11 +108,18 @@ public class SceneHandler : MonoBehaviour
         
         //Its time to take the screen shot
         if( (isOnInteraction) && ((Time.time - timeOfInteractionStart) > ConfigItems.time_print_after_start_interaction) )
-        {                     
+        {                                 
             PauseScene();
-            PanelManagerActive("barcode");
-        }         
-    }      
+            StartCoroutine(ShowYourEnergyPanel());
+        }               
+    }  
+        
+    private IEnumerator ShowYourEnergyPanel()
+    {      
+        PanelManagerActive("energy");
+        yield return new WaitForSeconds(ConfigItems.time_show_energy_panel);
+        PanelManagerActive("barcode");
+    }   
 
     /// <summary>
     /// The function responsible to handle all behaviors which depends on time
@@ -183,12 +191,12 @@ public class SceneHandler : MonoBehaviour
     }
 
     private void UpdateTimeLeftIdle()
-    {
+    {   
         float timeLeftToPrint = ConfigItems.time_print_after_start_interaction - (Time.time - TimeOfInteractionStart);
-        string minutes = ((int)timeLeftToPrint / 60).ToString();
-        string seconds = (timeLeftToPrint % 60).ToString("f1");
-        TxtTimer.text = minutes + ":" + seconds;
-    }
+        //string minutes = ((int)timeLeftToPrint / 60).ToString();
+        //string seconds = (timeLeftToPrint % 60).ToString("f1");
+        TxtTimer.text = timeLeftToPrint.ToString("f0");
+    }   
 
     private void LoadTheScene(string sceneToLoadName, string sceneToUnloadName)
     {   
@@ -224,29 +232,33 @@ public class SceneHandler : MonoBehaviour
     /// </summary>
     /// <returns>The return calls a function responsible to read and process the barcode input</returns>
     private IEnumerator ProcessBarcodeInput()
-    {      
+    {
+
         yield return new WaitForSeconds(1.3f);
         
-        string userInputQrCode = InputBarcode.text;
-        string[] userInputSeparated = userInputQrCode.Split(new[] {ConfigItems.input_separator}, StringSplitOptions.None);
-        
+        //string[] userInputSeparated = userInputQrCode.Split(new[] {ConfigItems.input_separator}, StringSplitOptions.None);
+
         //Input Data Validation
-        if(userInputSeparated.Length == 2)
-        {         
+        if(InputBarcode.text != "" && InputBarcode.text != null)
+        {   
             char lastUrlChar = ConfigItems.rest_api_url[ConfigItems.rest_api_url.Length - 1];
             if (lastUrlChar != '/')
             {
                 ConfigItems.rest_api_url += '/';
             }
-            
-            string apiParamsID = userInputSeparated[0];
-            string apiParamsEmail = userInputSeparated[1];
-            string urlParams = ConfigItems.rest_api_url + apiParamsID + '/' + apiParamsEmail;
 
-            //Debug.Log("URL: " + urlParams);
+            //string apiParamsID = userInputSeparated[0];
+            //string apiParamsEmail = userInputSeparated[1];
+            string urlParams = ConfigItems.rest_api_url + InputBarcode.text;
 
-            yield return GetRequest(urlParams);
-            //yield return ReadJsonUserData(InputBarcode.text);
+            if(ConfigItems.exec_teste)
+            {
+                yield return ReadJsonUserData(InputBarcode.text);
+            }
+            else
+            {
+                yield return GetRequest(urlParams);
+            }
         }
         else
         {   
@@ -256,7 +268,7 @@ public class SceneHandler : MonoBehaviour
     }
 
     private IEnumerator ReadJsonUserData(string barcodeText)
-    {      
+    {         
         if(barcodeText != "" && barcodeText != null)
         {   
             int userId;
@@ -273,7 +285,7 @@ public class SceneHandler : MonoBehaviour
 
                 if (userData.name != "" && userData.name != null)
                 {   
-                    ShowUserNameCanvas(userData);
+                    yield return ShowUserNamePanel(userData);
                     yield return TakeScreenShot(userData);
                 }
                 else
@@ -313,7 +325,7 @@ public class SceneHandler : MonoBehaviour
 
             if(lead.name != "" && lead.email != null)
             {   
-                ShowUserNameCanvas(lead);
+                yield return ShowUserNamePanel(lead);
                 yield return TakeScreenShot(lead);
             }   
             else
@@ -331,10 +343,11 @@ public class SceneHandler : MonoBehaviour
         }
     }
                         
-    private void ShowUserNameCanvas(Lead user)
-    {
+    private IEnumerator ShowUserNamePanel(Lead user)
+    {         
         PanelManagerActive("username");
         TxtUsername.text = user.name;
+        yield return new WaitForSeconds(ConfigItems.time_show_username_panel);
     }
         
     private IEnumerator TakeScreenShot(Lead currentUser)
@@ -358,19 +371,15 @@ public class SceneHandler : MonoBehaviour
 
         ScreenCapture.CaptureScreenshot(printScrPath, ConfigItems.print_quality_level);
 
-        yield return new WaitForSeconds(4f);
-
-        PanelManagerActive("loading");
-
         while (!System.IO.File.Exists(printScrPath))
         {   
             ResetTimeLeftToIdle();
             yield return null;
         }
 
-        yield return new WaitForSeconds(2f);
+        yield return ShowLoadingPanel();
 
-        if(printSuccess)
+        if (printSuccess)
         {   
             ResetTimeLeftToIdle();
             yield return ShowSuccess();
@@ -382,10 +391,16 @@ public class SceneHandler : MonoBehaviour
         }   
     }
 
+    private IEnumerator ShowLoadingPanel()
+    {
+        PanelManagerActive("loading");
+        yield return new WaitForSeconds(ConfigItems.time_show_loading_panel);
+    }   
+
     private IEnumerator ShowSuccess()
     {
         PanelManagerActive("success");
-        yield return new WaitForSeconds(3f);
+        yield return new WaitForSeconds(ConfigItems.time_show_success_panel);
     }
 
     private IEnumerator ShowError(string errorMsg)
@@ -406,13 +421,13 @@ public class SceneHandler : MonoBehaviour
 
     private IEnumerator ReturnToIdle()
     {            
-        yield return new WaitForSeconds(0.1f);
         isOnInteraction = false;
         CanvasInteraction.SetActive(false);
         LoadTheScene(idleSceneName, interactionSceneName);
         CanvasIdle.SetActive(true);
-    } 
-    
+        yield return null;
+    }
+
     private void PauseScene()
     {
         isOnInteraction = false;
@@ -438,6 +453,9 @@ public class SceneHandler : MonoBehaviour
 
                 if (TimerPanel.activeSelf)
                     TimerPanel.SetActive(false);
+
+                if (YourEnergyPanel.activeSelf)
+                    YourEnergyPanel.SetActive(false);
 
                 if (!BarcodePanel.activeSelf)
                     BarcodePanel.SetActive(true);
@@ -468,6 +486,9 @@ public class SceneHandler : MonoBehaviour
                 if (TimerPanel.activeSelf)
                     TimerPanel.SetActive(false);
 
+                if (YourEnergyPanel.activeSelf)
+                    YourEnergyPanel.SetActive(false);
+
                 if (!UsernamePanel.activeSelf)
                     UsernamePanel.SetActive(true);
 
@@ -492,6 +513,9 @@ public class SceneHandler : MonoBehaviour
                 if (TimerPanel.activeSelf)
                     TimerPanel.SetActive(false);
 
+                if (YourEnergyPanel.activeSelf)
+                    YourEnergyPanel.SetActive(false);
+
                 if (!LoadingPanel.activeSelf)
                     LoadingPanel.SetActive(true);
 
@@ -513,6 +537,9 @@ public class SceneHandler : MonoBehaviour
 
                 if (TimerPanel.activeSelf)
                     TimerPanel.SetActive(false);
+
+                if (YourEnergyPanel.activeSelf)
+                    YourEnergyPanel.SetActive(false);
 
                 if (!SuccessPanel.activeSelf)
                     SuccessPanel.SetActive(true);
@@ -536,10 +563,38 @@ public class SceneHandler : MonoBehaviour
                 if (TimerPanel.activeSelf)
                     TimerPanel.SetActive(false);
 
+                if (YourEnergyPanel.activeSelf)
+                    YourEnergyPanel.SetActive(false);
+
                 if (!ErrorPanel.activeSelf)
                     ErrorPanel.SetActive(true);
 
                 TxtError.text = "";
+
+                break;
+
+            case "energy":
+
+                if (BarcodePanel.activeSelf)
+                    BarcodePanel.SetActive(false);
+
+                if (UsernamePanel.activeSelf)
+                    UsernamePanel.SetActive(false);
+
+                if (LoadingPanel.activeSelf)
+                    LoadingPanel.SetActive(false);
+
+                if (SuccessPanel.activeSelf)
+                    SuccessPanel.SetActive(false);
+
+                if (TimerPanel.activeSelf)
+                    TimerPanel.SetActive(false);
+
+                if (ErrorPanel.activeSelf)
+                    ErrorPanel.SetActive(false);
+
+                if (!YourEnergyPanel.activeSelf)
+                    YourEnergyPanel.SetActive(true);
 
                 break;
 
@@ -569,6 +624,9 @@ public class SceneHandler : MonoBehaviour
 
                 if (BarcodePanel.activeSelf)
                     BarcodePanel.SetActive(false);
+
+                if (YourEnergyPanel.activeSelf)
+                    YourEnergyPanel.SetActive(false);
 
                 break;
         }   

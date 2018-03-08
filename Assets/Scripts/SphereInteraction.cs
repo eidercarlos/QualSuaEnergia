@@ -37,8 +37,8 @@ public class SphereInteraction : MonoBehaviour
     SceneHandler sceneHandler;
     Animator anim;
 
-    private void Awake()
-    {         
+    private void Start()
+    {            
         sceneHandler = SceneHandler.Instance;
         anim = GetComponent<Animator>();
 
@@ -107,14 +107,14 @@ public class SphereInteraction : MonoBehaviour
                 int intEmission = Mathf.CeilToInt(psEmission);
                 int roudedEmission = roundUp(intEmission, 5);
                 if(roudedEmission != lastEmittedValue)
-                {            
+                {                     
                     if(roudedEmission <= 120)
                     {
                         UpdateParticlesEmission(roudedEmission);
                     }
                     else
                     {
-                        UpdateParticlesEmission(roudedEmission/3);
+                        UpdateParticlesEmission(roudedEmission/4);
                     }
                 }      
             }
