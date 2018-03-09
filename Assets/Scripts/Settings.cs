@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class Settings
-{         
+{
     public float time_print_after_start_interaction;
     public float time_get_idle;
     public float time_show_energy_panel;
@@ -11,6 +11,7 @@ public class Settings
     public float time_show_loading_panel;
     public float time_show_success_panel;
     public string print_path;
+    public string second_path;
     public string print_file_name;
     public int print_quality_level;
     public string rest_api_url;
